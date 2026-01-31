@@ -45,22 +45,23 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
 
     const payload = request.body as any;
 
+    // Log raw payload để debug
+    app.log.info('Webhook raw payload: ' + JSON.stringify(payload));
+
     try {
-      // KiotViet gửi dạng: { Notifications: [{ Action: "order.update", Data: [...] }] }
-      // hoặc gửi trực tiếp object đơn hàng
+      // KiotViet gửi: { Notifications: [{ Action: "invoice.update", Data: [...] }] }
       const notifications = payload.Notifications || [payload];
 
       for (const notification of notifications) {
-        // Data có thể là array hoặc object
         const dataItems = notification.Data || [notification];
         const orderList = Array.isArray(dataItems) ? dataItems : [dataItems];
 
         for (const orderData of orderList) {
-          // Mã vận đơn: invoiceDelivery.deliveryCode
-          const shippingCode = orderData.invoiceDelivery?.deliveryCode;
+          // KiotViet dùng PascalCase: InvoiceDelivery.DeliveryCode
+          const shippingCode = orderData.InvoiceDelivery?.DeliveryCode;
 
           if (!shippingCode) {
-            app.log.warn('Webhook: đơn không có mã vận đơn (deliveryCode), code=' + (orderData.code || 'unknown'));
+            app.log.warn('Webhook: đơn không có mã vận đơn (DeliveryCode), Code=' + (orderData.Code || 'unknown'));
             continue;
           }
 
@@ -70,12 +71,12 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
             continue;
           }
 
-          // Danh sách sản phẩm: invoiceDetails[].productCode + quantity
-          const invoiceDetails = orderData.invoiceDetails || [];
+          // KiotViet PascalCase: InvoiceDetails[].ProductCode + Quantity
+          const invoiceDetails = orderData.InvoiceDetails || [];
           const items: { sku: string; quantity: number; productName: string }[] = invoiceDetails.map((detail: any) => ({
-            sku: detail.productCode,
-            quantity: detail.quantity || 1,
-            productName: detail.productName || '',
+            sku: detail.ProductCode,
+            quantity: detail.Quantity || 1,
+            productName: detail.ProductName || '',
           }));
 
           const skus = items.map((i) => i.sku);
