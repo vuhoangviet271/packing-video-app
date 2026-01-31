@@ -48,13 +48,18 @@ export function useQrScanner({ deviceId, onDetected, enabled = true }: UseQrScan
       .catch((err) => console.error('QR scanner start failed:', err));
 
     return () => {
-      scanner
-        .stop()
-        .catch(() => {})
-        .finally(() => {
-          scannerRef.current = null;
-          container?.remove();
-        });
+      try {
+        scanner
+          .stop()
+          .catch(() => {})
+          .finally(() => {
+            scannerRef.current = null;
+            container?.remove();
+          });
+      } catch {
+        scannerRef.current = null;
+        container?.remove();
+      }
     };
   }, [deviceId, enabled, handleDetected]);
 }

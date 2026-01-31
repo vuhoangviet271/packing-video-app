@@ -47,13 +47,18 @@ export function useBarcodeScanner({ deviceId, onDetected, enabled = true }: UseB
       .catch((err) => console.error('Barcode scanner start failed:', err));
 
     return () => {
-      scanner
-        .stop()
-        .catch(() => {})
-        .finally(() => {
-          scannerRef.current = null;
-          container?.remove();
-        });
+      try {
+        scanner
+          .stop()
+          .catch(() => {})
+          .finally(() => {
+            scannerRef.current = null;
+            container?.remove();
+          });
+      } catch {
+        scannerRef.current = null;
+        container?.remove();
+      }
     };
   }, [deviceId, enabled, handleDetected]);
 }
