@@ -3,17 +3,20 @@ import { deductPackingInventory, processReturn, manualAdjust } from '../services
 
 export const inventoryRoutes: FastifyPluginAsync = async (app) => {
   app.post('/packing-complete', { preHandler: [app.authenticate] }, async (request) => {
-    const { videoRecordId } = request.body as { videoRecordId: string };
-    await deductPackingInventory(app.prisma, videoRecordId);
+    const { shippingCode, items } = request.body as {
+      shippingCode: string;
+      items: { productId: string; quantity: number }[];
+    };
+    await deductPackingInventory(app.prisma, shippingCode, items);
     return { success: true };
   });
 
   app.post('/return-complete', { preHandler: [app.authenticate] }, async (request) => {
-    const { videoRecordId, items } = request.body as {
-      videoRecordId: string;
+    const { shippingCode, items } = request.body as {
+      shippingCode: string;
       items: { productId: string; quantity: number; quality: 'GOOD' | 'BAD' }[];
     };
-    await processReturn(app.prisma, videoRecordId, items);
+    await processReturn(app.prisma, shippingCode, items);
     return { success: true };
   });
 
