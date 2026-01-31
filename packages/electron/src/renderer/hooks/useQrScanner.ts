@@ -31,7 +31,11 @@ export function useQrScanner({ deviceId, onDetected, enabled = true }: UseQrScan
     if (!container) {
       container = document.createElement('div');
       container.id = containerId;
-      container.style.display = 'none';
+      container.style.position = 'fixed';
+      container.style.left = '-9999px';
+      container.style.top = '-9999px';
+      container.style.width = '300px';
+      container.style.height = '300px';
       document.body.appendChild(container);
     }
 
