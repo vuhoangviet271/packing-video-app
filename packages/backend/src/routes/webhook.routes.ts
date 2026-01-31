@@ -1,7 +1,48 @@
 import type { FastifyPluginAsync } from 'fastify';
+import { createHmac } from 'crypto';
+
+function verifyKiotVietSignature(body: string, signature: string, secret: string): boolean {
+  const hmac = createHmac('sha256', secret);
+  hmac.update(body);
+  const computed = hmac.digest('hex');
+  return computed === signature;
+}
 
 export const webhookRoutes: FastifyPluginAsync = async (app) => {
+  // Cần raw body để verify signature → thêm content type parser
+  app.addContentTypeParser(
+    'application/json',
+    { parseAs: 'string' },
+    (req, body, done) => {
+      try {
+        // Lưu raw body để verify signature
+        (req as any).rawBody = body;
+        done(null, JSON.parse(body as string));
+      } catch (err: any) {
+        done(err);
+      }
+    },
+  );
+
   app.post('/kiotviet', async (request, reply) => {
+    const webhookSecret = process.env.KIOTVIET_WEBHOOK_SECRET;
+
+    // Verify signature nếu có cấu hình secret
+    if (webhookSecret) {
+      const signature = request.headers['x-hub-signature'] as string;
+      const rawBody = (request as any).rawBody as string;
+
+      if (!signature || !rawBody) {
+        app.log.warn('Webhook missing signature or body');
+        return reply.status(401).send({ error: 'Missing signature' });
+      }
+
+      if (!verifyKiotVietSignature(rawBody, signature, webhookSecret)) {
+        app.log.warn('Webhook signature mismatch');
+        return reply.status(401).send({ error: 'Invalid signature' });
+      }
+    }
+
     const payload = request.body as any;
 
     try {
