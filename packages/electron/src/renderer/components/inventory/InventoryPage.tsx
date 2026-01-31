@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Card, Table, Button, Modal, Form, Input, InputNumber, Space, Typography, message, Tabs, Popconfirm, Tag,
+  Card, Table, Button, Modal, Form, Input, InputNumber, Space, Typography, message, Tabs, Popconfirm, Tag, Select,
 } from 'antd';
 import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { productApi } from '../../services/api';
@@ -31,7 +31,8 @@ export function InventoryPage() {
     setLoading(true);
     try {
       const res = await productApi.list();
-      setProducts(res.data);
+      const items = res.data.data || res.data;
+      setProducts(items.map((p: any) => ({ ...p, components: p.comboComponents })));
     } catch {
       message.error('Lỗi tải danh sách sản phẩm');
     } finally {
@@ -223,9 +224,17 @@ export function InventoryPage() {
                     <Form.Item
                       {...field}
                       name={[field.name, 'componentId']}
-                      rules={[{ required: true, message: 'Nhập ID sản phẩm' }]}
+                      rules={[{ required: true, message: 'Chọn sản phẩm' }]}
                     >
-                      <Input placeholder="ID sản phẩm thành phần" style={{ width: 300 }} />
+                      <Select
+                        placeholder="Chọn sản phẩm thành phần"
+                        style={{ width: 300 }}
+                        showSearch
+                        optionFilterProp="label"
+                        options={products
+                          .filter((p) => !p.isCombo)
+                          .map((p) => ({ value: p.id, label: `${p.sku} - ${p.name}` }))}
+                      />
                     </Form.Item>
                     <Form.Item
                       {...field}

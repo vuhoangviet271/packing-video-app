@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider, theme as antTheme } from 'antd';
 import viVN from 'antd/locale/vi_VN';
@@ -27,7 +28,12 @@ function ProtectedRoutes() {
 }
 
 export default function App() {
-  const { isAuthenticated } = useAuth();
+  const isAuthenticated = useAuth((s) => s.isAuthenticated);
+  const checkAuth = useAuth((s) => s.checkAuth);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   return (
     <ConfigProvider locale={viVN} theme={{ algorithm: antTheme.defaultAlgorithm }}>

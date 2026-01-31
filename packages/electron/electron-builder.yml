@@ -3,7 +3,7 @@ productName: Packing Video
 directories:
   output: release
 files:
-  - dist/**/*
+  - out/**/*
   - package.json
 win:
   target:
