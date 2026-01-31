@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Table, Tag } from 'antd';
 import { useSessionStore } from '../../stores/session.store';
 
@@ -6,7 +7,8 @@ interface SessionCacheProps {
 }
 
 export function SessionCache({ type }: SessionCacheProps) {
-  const entries = useSessionStore((s) => s.entries.filter((e) => e.type === type));
+  const allEntries = useSessionStore((s) => s.entries);
+  const entries = useMemo(() => allEntries.filter((e) => e.type === type), [allEntries, type]);
 
   const columns = [
     { title: 'STT', dataIndex: 'stt', key: 'stt', width: 50 },
