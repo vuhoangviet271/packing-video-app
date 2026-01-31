@@ -46,47 +46,64 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
     const payload = request.body as any;
 
     try {
+      // KiotViet gửi dạng: { Notifications: [{ Action: "order.update", Data: [...] }] }
+      // hoặc gửi trực tiếp object đơn hàng
       const notifications = payload.Notifications || [payload];
 
       for (const notification of notifications) {
-        const orderData = notification.Data || notification;
-        const shippingCode = orderData.Code || orderData.shippingCode;
+        // Data có thể là array hoặc object
+        const dataItems = notification.Data || [notification];
+        const orderList = Array.isArray(dataItems) ? dataItems : [dataItems];
 
-        if (!shippingCode) {
-          app.log.warn('Webhook received without shipping code');
-          continue;
-        }
+        for (const orderData of orderList) {
+          // Mã vận đơn: invoiceDelivery.deliveryCode
+          const shippingCode = orderData.invoiceDelivery?.deliveryCode;
 
-        const existing = await app.prisma.order.findUnique({ where: { shippingCode } });
-        if (existing) {
-          app.log.info('Order ' + shippingCode + ' already exists, skipping');
-          continue;
-        }
+          if (!shippingCode) {
+            app.log.warn('Webhook: đơn không có mã vận đơn (deliveryCode), code=' + (orderData.code || 'unknown'));
+            continue;
+          }
 
-        const orderDetails = orderData.OrderDetails || orderData.items || [];
-        const items: { sku: string; quantity: number }[] = orderDetails.map((detail: any) => ({
-          sku: detail.ProductCode || detail.sku,
-          quantity: detail.Quantity || detail.quantity || 1,
-        }));
+          const existing = await app.prisma.order.findUnique({ where: { shippingCode } });
+          if (existing) {
+            app.log.info('Order ' + shippingCode + ' already exists, skipping');
+            continue;
+          }
 
-        const skus = items.map((i) => i.sku);
-        const products = await app.prisma.product.findMany({ where: { sku: { in: skus } } });
-        const productMap = new Map(products.map((p) => [p.sku, p]));
+          // Danh sách sản phẩm: invoiceDetails[].productCode + quantity
+          const invoiceDetails = orderData.invoiceDetails || [];
+          const items: { sku: string; quantity: number; productName: string }[] = invoiceDetails.map((detail: any) => ({
+            sku: detail.productCode,
+            quantity: detail.quantity || 1,
+            productName: detail.productName || '',
+          }));
 
-        await app.prisma.order.create({
-          data: {
-            shippingCode,
-            source: 'kiotviet',
-            rawPayload: JSON.stringify(orderData),
-            items: {
-              create: items
-                .filter((i) => productMap.has(i.sku))
-                .map((i) => ({ productId: productMap.get(i.sku)!.id, quantity: i.quantity })),
+          const skus = items.map((i) => i.sku);
+          const products = await app.prisma.product.findMany({ where: { sku: { in: skus } } });
+          const productMap = new Map(products.map((p) => [p.sku, p]));
+
+          // Log sản phẩm không khớp
+          const unmatchedSkus = skus.filter((s) => !productMap.has(s));
+          if (unmatchedSkus.length > 0) {
+            app.log.warn('Webhook: SKU không tìm thấy trong DB: ' + unmatchedSkus.join(', '));
+          }
+
+          await app.prisma.order.create({
+            data: {
+              shippingCode,
+              source: 'kiotviet',
+              rawPayload: JSON.stringify(orderData),
+              items: {
+                create: items
+                  .filter((i) => productMap.has(i.sku))
+                  .map((i) => ({ productId: productMap.get(i.sku)!.id, quantity: i.quantity })),
+              },
             },
-          },
-        });
+          });
 
-        app.log.info('Order ' + shippingCode + ' created with ' + items.length + ' items');
+          const matched = items.length - unmatchedSkus.length;
+          app.log.info('Order ' + shippingCode + ' created: ' + matched + '/' + items.length + ' products matched');
+        }
       }
 
       return { success: true };
