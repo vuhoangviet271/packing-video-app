@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = localStorage.getItem('apiUrl') || 'https://api.spotless.vn';
+const API_BASE_URL = localStorage.getItem('apiUrl') || 'https://pack.spotless.vn';
 
 export const api = axios.create({
   baseURL: API_BASE_URL + '/api',
