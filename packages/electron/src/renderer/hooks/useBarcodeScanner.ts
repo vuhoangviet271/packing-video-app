@@ -1,0 +1,59 @@
+import { useEffect, useRef, useCallback } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
+
+interface UseBarcodeScannerOptions {
+  deviceId: string;
+  onDetected: (barcode: string) => void;
+  enabled?: boolean;
+}
+
+export function useBarcodeScanner({ deviceId, onDetected, enabled = true }: UseBarcodeScannerOptions) {
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const lastCodeRef = useRef<string>('');
+  const lastTimeRef = useRef<number>(0);
+  const onDetectedRef = useRef(onDetected);
+  onDetectedRef.current = onDetected;
+
+  const handleDetected = useCallback((text: string) => {
+    const now = Date.now();
+    if (text === lastCodeRef.current && now - lastTimeRef.current < 1000) return;
+    lastCodeRef.current = text;
+    lastTimeRef.current = now;
+    onDetectedRef.current(text);
+  }, []);
+
+  useEffect(() => {
+    if (!deviceId || !enabled) return;
+
+    const containerId = 'barcode-scanner-' + deviceId.slice(0, 8);
+    let container = document.getElementById(containerId);
+    if (!container) {
+      container = document.createElement('div');
+      container.id = containerId;
+      container.style.display = 'none';
+      document.body.appendChild(container);
+    }
+
+    const scanner = new Html5Qrcode(containerId);
+    scannerRef.current = scanner;
+
+    scanner
+      .start(
+        { deviceId: { exact: deviceId } },
+        { fps: 5, qrbox: { width: 300, height: 150 } },
+        handleDetected,
+        () => {}
+      )
+      .catch((err) => console.error('Barcode scanner start failed:', err));
+
+    return () => {
+      scanner
+        .stop()
+        .catch(() => {})
+        .finally(() => {
+          scannerRef.current = null;
+          container?.remove();
+        });
+    };
+  }, [deviceId, enabled, handleDetected]);
+}

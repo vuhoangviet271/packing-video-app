@@ -1,0 +1,13 @@
+{
+  "name": "packing-video-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:electron": "pnpm --filter electron dev",
+    "build:backend": "pnpm --filter backend build",
+    "build:electron": "pnpm --filter electron build",
+    "db:migrate": "pnpm --filter backend db:migrate",
+    "db:seed": "pnpm --filter backend db:seed"
+  }
+}

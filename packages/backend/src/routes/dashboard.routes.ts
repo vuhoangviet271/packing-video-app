@@ -1,0 +1,33 @@
+import type { FastifyPluginAsync } from 'fastify';
+
+export const dashboardRoutes: FastifyPluginAsync = async (app) => {
+  app.get('/today', async () => {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const ordersPackedToday = await app.prisma.videoRecord.count({
+      where: { type: 'PACKING', status: 'COMPLETED', createdAt: { gte: startOfDay, lte: endOfDay } },
+    });
+
+    const todayVideos = await app.prisma.videoRecord.findMany({
+      where: { type: 'PACKING', status: 'COMPLETED', createdAt: { gte: startOfDay, lte: endOfDay } },
+      include: { scannedItems: { include: { product: { select: { name: true, sku: true } } } } },
+    });
+
+    const breakdown = new Map<string, { productName: string; sku: string; totalQty: number }>();
+    for (const video of todayVideos) {
+      for (const item of video.scannedItems) {
+        const existing = breakdown.get(item.productId);
+        if (existing) {
+          existing.totalQty += item.scannedQty;
+        } else {
+          breakdown.set(item.productId, { productName: item.product.name, sku: item.product.sku, totalQty: item.scannedQty });
+        }
+      }
+    }
+
+    return { ordersPackedToday, productBreakdown: Array.from(breakdown.values()) };
+  });
+};

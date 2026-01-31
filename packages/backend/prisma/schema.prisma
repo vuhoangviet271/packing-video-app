@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Staff {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  fullName  String   @map("full_name")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  videos    VideoRecord[]
+  @@map("staff")
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  shippingCode String      @unique @map("shipping_code")
+  source       String      @default("kiotviet")
+  rawPayload   String?     @map("raw_payload")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  items        OrderItem[]
+  videos       VideoRecord[]
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String  @map("order_id")
+  productId String  @map("product_id")
+  quantity  Int
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
+  @@unique([orderId, productId])
+  @@map("order_items")
+}
+
+model Product {
+  id              String           @id @default(cuid())
+  sku             String           @unique
+  barcode         String?          @unique
+  name            String
+  imageUrl        String?          @map("image_url")
+  isCombo         Boolean          @default(false) @map("is_combo")
+  quantity        Int              @default(0)
+  unsellableQty   Int              @default(0) @map("unsellable_qty")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  orderItems      OrderItem[]
+  comboComponents ComboComponent[] @relation("combo")
+  partOfCombos    ComboComponent[] @relation("component")
+  scannedItems    ScannedItem[]
+  @@map("products")
+}
+
+model ComboComponent {
+  id          String  @id @default(cuid())
+  comboId     String  @map("combo_id")
+  componentId String  @map("component_id")
+  quantity    Int
+  combo       Product @relation("combo", fields: [comboId], references: [id], onDelete: Cascade)
+  component   Product @relation("component", fields: [componentId], references: [id])
+  @@unique([comboId, componentId])
+  @@map("combo_components")
+}
+
+model VideoRecord {
+  id           String        @id @default(cuid())
+  shippingCode String        @map("shipping_code")
+  orderId      String?       @map("order_id")
+  staffId      String        @map("staff_id")
+  type         String
+  status       String        @default("COMPLETED")
+  duration     Int           @default(0)
+  fileName     String        @map("file_name")
+  machineName  String        @map("machine_name")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  order        Order?        @relation(fields: [orderId], references: [id])
+  staff        Staff         @relation(fields: [staffId], references: [id])
+  scannedItems ScannedItem[]
+  @@map("video_records")
+}
+
+model ScannedItem {
+  id            String      @id @default(cuid())
+  videoRecordId String      @map("video_record_id")
+  productId     String      @map("product_id")
+  scannedQty    Int         @default(1) @map("scanned_qty")
+  returnQuality String?     @map("return_quality")
+  scannedAt     DateTime    @default(now()) @map("scanned_at")
+  videoRecord   VideoRecord @relation(fields: [videoRecordId], references: [id], onDelete: Cascade)
+  product       Product     @relation(fields: [productId], references: [id])
+  @@unique([videoRecordId, productId])
+  @@map("scanned_items")
+}
+
+model InventoryTransaction {
+  id        String   @id @default(cuid())
+  productId String   @map("product_id")
+  action    String
+  quantity  Int
+  reference String?
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("inventory_transactions")
+}
