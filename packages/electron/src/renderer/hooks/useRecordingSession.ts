@@ -19,7 +19,6 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
   const store = useRecordingStore();
   const sessionStore = useSessionStore();
   const cameraStore = useCameraStore();
-  const productCache = useProductCacheStore();
   const pendingQrRef = useRef<string | null>(null);
   const { play: playSound } = useSounds();
 
@@ -44,7 +43,8 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
       if (currentState === 'SAVING' || currentState === 'CHECK_DUPLICATE') return;
 
       // Try product lookup from local cache (instant, no API call)
-      const product = productCache.getByBarcode(code);
+      // Use getState() to always read latest cache (avoids stale closure)
+      const product = useProductCacheStore.getState().getByBarcode(code);
 
       if (product) {
         // It's a product barcode
