@@ -1,4 +1,4 @@
-import { useState, useEffect, type RefObject } from 'react';
+import { useState, useEffect } from 'react';
 import { Select, Typography, Space, Input, message } from 'antd';
 import { FolderOpenOutlined } from '@ant-design/icons';
 import { useCameraDevices } from '../../hooks/useCameraDevices';
@@ -6,11 +6,7 @@ import { useCameraStore } from '../../stores/camera.store';
 
 const { Text } = Typography;
 
-interface CameraSelectorProps {
-  qrVideoRef?: RefObject<HTMLVideoElement | null>;
-}
-
-export function CameraSelector({ qrVideoRef }: CameraSelectorProps) {
+export function CameraSelector() {
   const devices = useCameraDevices();
   const { cam1DeviceId, cam2DeviceId, setCam1, setCam2 } = useCameraStore();
   const [videoDir, setVideoDir] = useState<string>('');
@@ -56,28 +52,6 @@ export function CameraSelector({ qrVideoRef }: CameraSelectorProps) {
           options={options}
           allowClear
         />
-        {cam2DeviceId && qrVideoRef && (
-          <div
-            style={{
-              marginTop: 8,
-              position: 'relative',
-              width: '100%',
-              aspectRatio: '1',
-              background: '#000',
-              borderRadius: 8,
-              overflow: 'hidden',
-            }}
-          >
-            <video
-              ref={qrVideoRef}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-              }}
-            />
-          </div>
-        )}
       </div>
       <div>
         <Text strong>Thư mục lưu video:</Text>

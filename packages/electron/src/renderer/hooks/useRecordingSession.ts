@@ -118,7 +118,7 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
   }
 
   // Start QR scanner on Cam2
-  const { videoRef: qrVideoRef } = useQrScanner({
+  const { videoRef: qrVideoRef, resetLastCode } = useQrScanner({
     deviceId: cameraStore.cam2DeviceId,
     onDetected: handleQrDetected,
     enabled: true,
@@ -301,6 +301,7 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
     }
 
     store.reset();
+    resetLastCode();
   }
 
   async function handlePendingQr() {

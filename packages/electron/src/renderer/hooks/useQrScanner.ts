@@ -11,18 +11,15 @@ export function useQrScanner({ deviceId, onDetected, enabled = true }: UseQrScan
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scannerRef = useRef<QrScanner | null>(null);
   const lastCodeRef = useRef<string>('');
-  const lastTimeRef = useRef<number>(0);
   const onDetectedRef = useRef(onDetected);
   onDetectedRef.current = onDetected;
 
   const handleDetected = useCallback((result: QrScanner.ScanResult) => {
     const text = result.data;
     if (!text) return;
-    const now = Date.now();
-    // Debounce: ignore same code within 2 seconds
-    if (text === lastCodeRef.current && now - lastTimeRef.current < 2000) return;
+    // Chỉ trigger khi QR code khác với code trước đó
+    if (text === lastCodeRef.current) return;
     lastCodeRef.current = text;
-    lastTimeRef.current = now;
     onDetectedRef.current(text);
   }, []);
 
@@ -55,5 +52,9 @@ export function useQrScanner({ deviceId, onDetected, enabled = true }: UseQrScan
     };
   }, [deviceId, enabled, handleDetected]);
 
-  return { videoRef };
+  const resetLastCode = useCallback(() => {
+    lastCodeRef.current = '';
+  }, []);
+
+  return { videoRef, resetLastCode };
 }

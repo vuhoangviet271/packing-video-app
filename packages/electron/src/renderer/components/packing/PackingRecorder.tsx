@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Row, Col, Typography, Tag, Badge, Divider, Collapse, Input, Modal } from 'antd';
-import { VideoCameraOutlined, WarningOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Typography, Tag, Badge, Divider, Collapse, Input, Modal, Button } from 'antd';
+import { VideoCameraOutlined, WarningOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import { CameraPreview } from '../camera/CameraPreview';
 import { CameraSelector } from '../camera/CameraSelector';
 import { OrderItemsTable } from './OrderItemsTable';
@@ -15,6 +15,7 @@ const { Title, Text } = Typography;
 
 export function PackingRecorder() {
   const cam1Stream = useCam1Stream();
+  const [showCam2, setShowCam2] = useState(true);
   const [duplicateCode, setDuplicateCode] = useState<string | null>(null);
   const [duplicateResolve, setDuplicateResolve] = useState<((v: boolean) => void) | null>(null);
 
@@ -108,6 +109,42 @@ export function PackingRecorder() {
                   <Text style={{ color: '#fff' }}>MVD: {shippingCode}</Text>
                 </div>
               )}
+              {/* Cam 2 overlay - góc trên phải */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  width: '20%',
+                  aspectRatio: '1',
+                  background: '#000',
+                  borderRadius: 6,
+                  overflow: 'hidden',
+                  border: '2px solid rgba(255,255,255,0.5)',
+                  zIndex: 10,
+                  display: showCam2 ? 'block' : 'none',
+                }}
+              >
+                <video
+                  ref={qrVideoRef}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+              {/* Nút ẩn/hiện cam 2 */}
+              <Button
+                size="small"
+                icon={showCam2 ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+                onClick={() => setShowCam2(!showCam2)}
+                style={{
+                  position: 'absolute',
+                  top: 8,
+                  right: showCam2 ? 'calc(20% + 16px)' : 8,
+                  zIndex: 11,
+                  opacity: 0.8,
+                }}
+              >
+                Cam 2
+              </Button>
             </div>
           </Card>
 
@@ -153,7 +190,7 @@ export function PackingRecorder() {
               {
                 key: 'camera',
                 label: 'Cài đặt Camera',
-                children: <CameraSelector qrVideoRef={qrVideoRef} />,
+                children: <CameraSelector />,
               },
             ]}
           />
