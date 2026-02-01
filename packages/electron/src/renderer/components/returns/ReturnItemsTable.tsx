@@ -1,86 +1,106 @@
-import { Table, Tag, Select } from 'antd';
-import type { ExpandedOrderItem } from '@packing/shared';
+import { Table, Tag, Button, Segmented } from 'antd';
+import { DeleteOutlined } from '@ant-design/icons';
+import type { ReturnScanEntry } from '../../stores/recording.store';
 
 interface ReturnItemsTableProps {
-  items: ExpandedOrderItem[];
-  scanCounts: Record<string, number>;
+  entries: ReturnScanEntry[];
+  onQualityChange: (entryId: string, quality: 'GOOD' | 'BAD') => void;
+  onRemove: (entryId: string) => void;
 }
 
-export function ReturnItemsTable({ items, scanCounts }: ReturnItemsTableProps) {
-  const dataSource = items.map((item, idx) => ({
-    key: item.productId + '-' + idx,
-    ...item,
-    _scanned: scanCounts[item.productId] || 0,
+export function ReturnItemsTable({ entries, onQualityChange, onRemove }: ReturnItemsTableProps) {
+  const dataSource = entries.map((entry, idx) => ({
+    key: entry.id,
+    idx: idx + 1,
+    ...entry,
   }));
 
-  // Also show foreign scans
-  const foreignEntries = Object.entries(scanCounts)
-    .filter(([key]) => key.startsWith('FOREIGN:'))
-    .map(([key, qty], idx) => ({
-      key: 'foreign-' + idx,
-      productId: key,
-      productName: 'Sản phẩm lạ',
-      sku: key.replace('FOREIGN:', '').slice(0, 8),
-      barcode: null,
-      requiredQty: 0,
-      isComboComponent: false,
-      _scanned: qty,
-      _isForeign: true,
-    }));
-
-  const allData = [
-    ...dataSource.map((d) => ({ ...d, _isForeign: false })),
-    ...foreignEntries,
-  ];
-
   const columns = [
+    {
+      title: '#',
+      dataIndex: 'idx',
+      key: 'idx',
+      width: 40,
+      align: 'center' as const,
+    },
     {
       title: 'Sản phẩm',
       dataIndex: 'productName',
       key: 'productName',
       render: (name: string, record: any) => (
-        <div>
-          <div>{name}</div>
-          <div style={{ fontSize: 12, color: '#999' }}>{record.sku}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {record.imageUrl ? (
+            <img
+              src={record.imageUrl}
+              alt={name}
+              style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                background: '#f5f5f5',
+                borderRadius: 4,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                fontSize: 14,
+                color: '#ccc',
+              }}
+            >
+              📦
+            </div>
+          )}
+          <div>
+            <div>{name}</div>
+            <div style={{ fontSize: 12, color: '#999' }}>{record.sku}</div>
+          </div>
         </div>
       ),
     },
     {
-      title: 'SL quét',
-      dataIndex: '_scanned',
-      key: '_scanned',
-      width: 60,
-      align: 'center' as const,
-    },
-    {
       title: 'Chất lượng',
       key: 'quality',
-      width: 130,
-      render: (_: any, record: any) => {
-        if (record._isForeign) return <Tag color="red">Lạ</Tag>;
-        if (record._scanned === 0) return <Tag>Chưa quét</Tag>;
-        return (
-          <Select
-            size="small"
-            defaultValue="GOOD"
-            style={{ width: 110 }}
-            options={[
-              { label: 'Hoàn tốt', value: 'GOOD' },
-              { label: 'Hoàn xấu', value: 'BAD' },
-            ]}
-          />
-        );
-      },
+      width: 180,
+      align: 'center' as const,
+      render: (_: any, record: any) => (
+        <Segmented
+          size="small"
+          value={record.quality}
+          onChange={(val) => onQualityChange(record.id, val as 'GOOD' | 'BAD')}
+          options={[
+            { label: 'Hoàn tốt', value: 'GOOD' },
+            { label: 'Hoàn xấu', value: 'BAD' },
+          ]}
+        />
+      ),
+    },
+    {
+      title: '',
+      key: 'action',
+      width: 40,
+      render: (_: any, record: any) => (
+        <Button
+          type="text"
+          size="small"
+          danger
+          icon={<DeleteOutlined />}
+          onClick={() => onRemove(record.id)}
+        />
+      ),
     },
   ];
 
   return (
     <Table
-      dataSource={allData}
+      dataSource={dataSource}
       columns={columns}
       pagination={false}
       size="small"
-      style={{ marginTop: 8 }}
+      style={{ marginTop: 8, maxHeight: 400, overflow: 'auto' }}
+      locale={{ emptyText: 'Quét barcode sản phẩm hoàn...' }}
     />
   );
 }

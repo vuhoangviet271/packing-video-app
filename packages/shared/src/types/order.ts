@@ -22,6 +22,7 @@ export interface ExpandedOrderItem {
   productName: string;
   sku: string;
   barcode: string | null;
+  imageUrl: string | null;
   requiredQty: number;
   parentComboName?: string;
   isComboComponent: boolean;

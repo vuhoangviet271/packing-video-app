@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Row, Col, Typography, Tag, Badge, Divider, Collapse } from 'antd';
+import { Card, Row, Col, Typography, Tag, Badge, Collapse, Input } from 'antd';
 import { RollbackOutlined } from '@ant-design/icons';
 import { CameraPreview } from '../camera/CameraPreview';
 import { CameraSelector } from '../camera/CameraSelector';
@@ -7,7 +7,9 @@ import { ReturnItemsTable } from './ReturnItemsTable';
 import { SessionCache } from '../packing/SessionCache';
 import { DuplicateModal } from '../packing/DuplicateModal';
 import { useRecordingSession } from '../../hooks/useRecordingSession';
+import { useRecordingStore } from '../../stores/recording.store';
 import { useCam1Stream } from '../../hooks/useCam1Stream';
+import { useScannerGun } from '../../hooks/useScannerGun';
 
 const { Title, Text } = Typography;
 
@@ -23,16 +25,23 @@ export function ReturnRecorder() {
     });
   }, []);
 
-  const { isRecording, duration, stopManually, state, shippingCode, orderItems, scanCounts } =
+  const { isRecording, duration, stopManually, handleScannerInput, state, shippingCode, returnScanEntries } =
     useRecordingSession({
       type: 'RETURN',
       cam1Stream,
       onDuplicateFound: handleDuplicateFound,
     });
 
+  // Scanner gun integration
+  useScannerGun({
+    onScan: handleScannerInput,
+    enabled: true,
+  });
+
+  // Keyboard shortcut: Escape to stop recording
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.key === 'Enter' || e.key === ' ') && isRecording) {
+      if (e.key === 'Escape' && isRecording) {
         e.preventDefault();
         stopManually();
       }
@@ -40,6 +49,14 @@ export function ReturnRecorder() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isRecording, stopManually]);
+
+  const handleQualityChange = useCallback((entryId: string, quality: 'GOOD' | 'BAD') => {
+    useRecordingStore.getState().updateReturnEntryQuality(entryId, quality);
+  }, []);
+
+  const handleRemoveEntry = useCallback((entryId: string) => {
+    useRecordingStore.getState().removeReturnScanEntry(entryId);
+  }, []);
 
   const formatDuration = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
@@ -91,12 +108,12 @@ export function ReturnRecorder() {
           </Card>
 
           <Card size="small" style={{ marginTop: 8 }}>
-            <Row justify="space-between" align="middle">
+            <Row justify="space-between" align="middle" gutter={12}>
               <Col>
                 Trạng thái:{' '}
                 <Tag color={state === 'RECORDING' ? 'red' : state === 'SAVING' ? 'orange' : 'default'}>
                   {state === 'IDLE'
-                    ? 'Chờ QR'
+                    ? 'Chờ quét'
                     : state === 'RECORDING'
                       ? 'Đang quay'
                       : state === 'SAVING'
@@ -104,35 +121,27 @@ export function ReturnRecorder() {
                         : 'Kiểm tra trùng'}
                 </Tag>
               </Col>
-              <Col>
-                <Text type="secondary">Nhấn Enter/Space để dừng quay</Text>
+              <Col flex="auto">
+                {state === 'IDLE' && (
+                  <Input.Search
+                    placeholder="Nhập mã vận đơn..."
+                    enterButton="Bắt đầu"
+                    size="small"
+                    onSearch={(value) => {
+                      if (value.trim()) handleScannerInput(value.trim());
+                    }}
+                  />
+                )}
+                {state === 'RECORDING' && (
+                  <Text type="secondary">Nhấn Escape để dừng quay</Text>
+                )}
               </Col>
             </Row>
           </Card>
         </Col>
 
         <Col span={10}>
-          <Card
-            title={
-              <span>
-                <RollbackOutlined /> Thông tin hàng hoàn
-              </span>
-            }
-            size="small"
-          >
-            {shippingCode ? (
-              <>
-                <Text strong>Mã vận đơn: </Text>
-                <Text>{shippingCode}</Text>
-                <ReturnItemsTable items={orderItems} scanCounts={scanCounts} />
-              </>
-            ) : (
-              <Text type="secondary">Quét QR mã vận đơn để bắt đầu...</Text>
-            )}
-          </Card>
-
           <Collapse
-            style={{ marginTop: 8 }}
             defaultActiveKey={['camera']}
             items={[
               {
@@ -143,13 +152,36 @@ export function ReturnRecorder() {
             ]}
           />
 
-          <Divider style={{ margin: '12px 0' }} />
-
-          <Card title="Phiên làm việc" size="small">
+          <Card title="Phiên làm việc" size="small" style={{ marginTop: 8 }}>
             <SessionCache type="RETURN" />
           </Card>
         </Col>
       </Row>
+
+      {/* Return items - full width below */}
+      <Card
+        title={
+          <span>
+            <RollbackOutlined /> Sản phẩm hoàn
+            {shippingCode && <span style={{ fontWeight: 'normal', marginLeft: 12 }}>MVD: {shippingCode}</span>}
+            {returnScanEntries.length > 0 && (
+              <Tag style={{ marginLeft: 8 }}>{returnScanEntries.length} sản phẩm</Tag>
+            )}
+          </span>
+        }
+        size="small"
+        style={{ marginTop: 12 }}
+      >
+        {shippingCode ? (
+          <ReturnItemsTable
+            entries={returnScanEntries}
+            onQualityChange={handleQualityChange}
+            onRemove={handleRemoveEntry}
+          />
+        ) : (
+          <Text type="secondary">Quét QR hoặc nhập mã vận đơn để bắt đầu...</Text>
+        )}
+      </Card>
 
       <DuplicateModal
         open={!!duplicateCode}

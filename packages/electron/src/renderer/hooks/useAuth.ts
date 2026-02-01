@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { authApi } from '../services/api';
+import { useProductCacheStore } from '../stores/product-cache.store';
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -19,6 +20,8 @@ export const useAuth = create<AuthState>((set) => ({
     localStorage.setItem('staffId', res.data.staff.id);
     localStorage.setItem('staffName', res.data.staff.fullName);
     set({ isAuthenticated: true, staffName: res.data.staff.fullName });
+    // Load product cache after login
+    useProductCacheStore.getState().loadProducts();
   },
 
   logout: () => {
@@ -37,6 +40,8 @@ export const useAuth = create<AuthState>((set) => ({
           localStorage.setItem('staffId', res.data.id);
           localStorage.setItem('staffName', res.data.fullName);
           set({ staffName: res.data.fullName });
+          // Load product cache on auth check
+          useProductCacheStore.getState().loadProducts();
         })
         .catch(() => {
           localStorage.removeItem('token');

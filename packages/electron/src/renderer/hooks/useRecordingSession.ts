@@ -2,10 +2,11 @@ import { useCallback, useRef } from 'react';
 import { useRecordingStore } from '../stores/recording.store';
 import { useSessionStore } from '../stores/session.store';
 import { useCameraStore } from '../stores/camera.store';
+import { useProductCacheStore } from '../stores/product-cache.store';
 import { useMediaRecorder } from './useMediaRecorder';
 import { useQrScanner } from './useQrScanner';
-import { useBarcodeScanner } from './useBarcodeScanner';
-import { orderApi, videoApi, inventoryApi, productApi } from '../services/api';
+import { useSounds } from './useSounds';
+import { orderApi, videoApi, inventoryApi } from '../services/api';
 import type { ExpandedOrderItem, VideoType } from '@packing/shared';
 
 interface UseRecordingSessionOptions {
@@ -18,71 +19,91 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
   const store = useRecordingStore();
   const sessionStore = useSessionStore();
   const cameraStore = useCameraStore();
+  const productCache = useProductCacheStore();
   const pendingQrRef = useRef<string | null>(null);
+  const { play: playSound } = useSounds();
 
   const { isRecording, duration, start: startRecorder, stop: stopRecorder } = useMediaRecorder({
     stream: cam1Stream,
   });
 
-  // Handle QR code detected from Cam2
+  // Handle QR code detected from Cam2 (camera)
   const handleQrDetected = useCallback(
     async (code: string) => {
-      const currentState = useRecordingStore.getState().state;
-
-      if (currentState === 'SAVING' || currentState === 'CHECK_DUPLICATE') return;
-
-      if (currentState === 'IDLE') {
-        await startNewRecording(code);
-      } else if (currentState === 'RECORDING') {
-        // New QR during recording → save current, then check duplicate, then start new
-        pendingQrRef.current = code;
-        await saveCurrentRecording();
-        // After saving, handle the pending QR
-        await handlePendingQr();
-      }
+      // QR from camera is always treated as shipping code
+      await handleShippingCode(code);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [cam1Stream]
   );
 
-  // Handle barcode detected from Cam3
-  const handleBarcodeDetected = useCallback(
-    async (barcode: string) => {
-      const { state, orderItems } = useRecordingStore.getState();
-      if (state !== 'RECORDING') return;
+  // Handle scanner gun input (could be barcode or shipping code)
+  const handleScannerInput = useCallback(
+    async (code: string) => {
+      const currentState = useRecordingStore.getState().state;
+      if (currentState === 'SAVING' || currentState === 'CHECK_DUPLICATE') return;
 
-      try {
-        const res = await productApi.getByBarcode(barcode);
-        const product = res.data;
-        if (!product) return;
+      // Try product lookup from local cache (instant, no API call)
+      const product = productCache.getByBarcode(code);
 
-        // Check if this product is in the order's expanded items
+      if (product) {
+        // It's a product barcode
+        if (currentState !== 'RECORDING') return; // Ignore product scan when not recording
+
+        const { orderItems } = useRecordingStore.getState();
         const matchingItem = orderItems.find((item) => item.productId === product.id);
-        if (matchingItem) {
+
+        if (type === 'RETURN') {
+          // For returns: add individual entry
+          useRecordingStore.getState().addReturnScanEntry({
+            productId: product.id,
+            productName: product.name,
+            sku: product.sku,
+            barcode: product.barcode || null,
+            imageUrl: product.imageUrl || null,
+            quality: 'GOOD',
+          });
           useRecordingStore.getState().incrementScan(product.id);
+          playSound('scanSuccess');
         } else {
-          // Foreign product - still track it
-          useRecordingStore.getState().incrementScan('FOREIGN:' + product.id);
+          // For packing: increment scan count
+          if (matchingItem) {
+            useRecordingStore.getState().incrementScan(product.id);
+            playSound('scanSuccess');
+          } else {
+            useRecordingStore.getState().incrementScan('FOREIGN:' + product.id);
+            playSound('scanError');
+          }
         }
-      } catch (err) {
-        console.error('Barcode lookup failed:', err);
+      } else {
+        // Not a product barcode → treat as shipping code
+        await handleShippingCode(code);
       }
     },
-    []
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [cam1Stream, type]
   );
+
+  // Handle shipping code (from QR camera or scanner gun)
+  async function handleShippingCode(code: string) {
+    const currentState = useRecordingStore.getState().state;
+    if (currentState === 'SAVING' || currentState === 'CHECK_DUPLICATE') return;
+
+    if (currentState === 'IDLE') {
+      await startNewRecording(code);
+    } else if (currentState === 'RECORDING') {
+      // New shipping code during recording → save current, then start new
+      pendingQrRef.current = code;
+      await saveCurrentRecording();
+      await handlePendingQr();
+    }
+  }
 
   // Start QR scanner on Cam2
   useQrScanner({
     deviceId: cameraStore.cam2DeviceId,
     onDetected: handleQrDetected,
     enabled: true,
-  });
-
-  // Start barcode scanner on Cam3
-  useBarcodeScanner({
-    deviceId: cameraStore.cam3DeviceId,
-    onDetected: handleBarcodeDetected,
-    enabled: useRecordingStore.getState().state === 'RECORDING',
   });
 
   async function startNewRecording(shippingCode: string) {
@@ -126,6 +147,7 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
                 productName: comp.component.name,
                 sku: comp.component.sku,
                 barcode: comp.component.barcode,
+                imageUrl: comp.component.imageUrl || null,
                 requiredQty: item.quantity * comp.quantity,
                 parentComboName: product.name,
                 isComboComponent: true,
@@ -142,6 +164,7 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
               productName: product.name,
               sku: product.sku,
               barcode: product.barcode || null,
+              imageUrl: product.imageUrl || null,
               requiredQty: item.quantity,
               isComboComponent: false,
             });
@@ -162,11 +185,14 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
     // Start recording
     startRecorder();
     store.setState('RECORDING');
+    playSound('recordStart');
   }
 
   async function saveCurrentRecording() {
-    const { currentShippingCode, scanCounts, orderItems } = useRecordingStore.getState();
+    const { currentShippingCode, scanCounts, orderItems, returnScanEntries } =
+      useRecordingStore.getState();
     store.setState('SAVING');
+    playSound('recordStop');
 
     try {
       const { blob, duration: dur } = await stopRecorder();
@@ -212,14 +238,23 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
           })),
         });
       } else if (type === 'RETURN') {
-        await inventoryApi.returnComplete({
-          shippingCode: currentShippingCode,
-          items: scannedItems.map((si) => ({
-            productId: si.productId,
-            quantity: si.scannedQty,
-            quality: 'GOOD', // default, overridden by return flow
-          })),
-        });
+        // Group return entries by productId + quality
+        const grouped = new Map<string, { productId: string; quantity: number; quality: 'GOOD' | 'BAD' }>();
+        for (const entry of returnScanEntries) {
+          const key = `${entry.productId}:${entry.quality}`;
+          const existing = grouped.get(key);
+          if (existing) {
+            existing.quantity++;
+          } else {
+            grouped.set(key, { productId: entry.productId, quantity: 1, quality: entry.quality });
+          }
+        }
+        if (grouped.size > 0) {
+          await inventoryApi.returnComplete({
+            shippingCode: currentShippingCode,
+            items: Array.from(grouped.values()),
+          });
+        }
       }
 
       // Add to session cache
@@ -252,7 +287,7 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
     }
   }
 
-  // Manual stop (Enter/Space)
+  // Manual stop (Escape key)
   const stopManually = useCallback(async () => {
     const currentState = useRecordingStore.getState().state;
     if (currentState !== 'RECORDING') return;
@@ -264,9 +299,11 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
     isRecording,
     duration,
     stopManually,
+    handleScannerInput,
     state: store.state,
     shippingCode: store.currentShippingCode,
     orderItems: store.orderItems,
     scanCounts: store.scanCounts,
+    returnScanEntries: store.returnScanEntries,
   };
 }

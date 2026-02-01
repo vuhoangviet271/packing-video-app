@@ -33,6 +33,7 @@ export function OrderItemsTable({ items, scanCounts }: OrderItemsTableProps) {
       productName: 'Sản phẩm lạ',
       sku: key.replace('FOREIGN:', '').slice(0, 8),
       barcode: null,
+      imageUrl: null,
       requiredQty: 0,
       isComboComponent: false,
       _scanned: qty,
@@ -58,11 +59,37 @@ export function OrderItemsTable({ items, scanCounts }: OrderItemsTableProps) {
       dataIndex: 'productName',
       key: 'productName',
       render: (name: string, record: any) => (
-        <div>
-          <div>{name}</div>
-          <div style={{ fontSize: 12, color: '#999' }}>
-            {record.sku}
-            {record.parentComboName && ` (combo: ${record.parentComboName})`}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {record.imageUrl ? (
+            <img
+              src={record.imageUrl}
+              alt={name}
+              style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                background: '#f5f5f5',
+                borderRadius: 4,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                fontSize: 18,
+                color: '#ccc',
+              }}
+            >
+              📦
+            </div>
+          )}
+          <div>
+            <div>{name}</div>
+            <div style={{ fontSize: 12, color: '#999' }}>
+              {record.sku}
+              {record.parentComboName && ` (combo: ${record.parentComboName})`}
+            </div>
           </div>
         </div>
       ),

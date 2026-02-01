@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Row, Col, Typography, Tag, Badge, Divider, Collapse } from 'antd';
+import { Card, Row, Col, Typography, Tag, Badge, Divider, Collapse, Input } from 'antd';
 import { VideoCameraOutlined } from '@ant-design/icons';
 import { CameraPreview } from '../camera/CameraPreview';
 import { CameraSelector } from '../camera/CameraSelector';
@@ -8,6 +8,7 @@ import { SessionCache } from './SessionCache';
 import { DuplicateModal } from './DuplicateModal';
 import { useRecordingSession } from '../../hooks/useRecordingSession';
 import { useCam1Stream } from '../../hooks/useCam1Stream';
+import { useScannerGun } from '../../hooks/useScannerGun';
 
 const { Title, Text } = Typography;
 
@@ -23,17 +24,23 @@ export function PackingRecorder() {
     });
   }, []);
 
-  const { isRecording, duration, stopManually, state, shippingCode, orderItems, scanCounts } =
+  const { isRecording, duration, stopManually, handleScannerInput, state, shippingCode, orderItems, scanCounts } =
     useRecordingSession({
       type: 'PACKING',
       cam1Stream,
       onDuplicateFound: handleDuplicateFound,
     });
 
-  // Keyboard shortcuts: Enter or Space to stop recording
+  // Scanner gun integration
+  useScannerGun({
+    onScan: handleScannerInput,
+    enabled: true,
+  });
+
+  // Keyboard shortcut: Escape to stop recording
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.key === 'Enter' || e.key === ' ') && isRecording) {
+      if (e.key === 'Escape' && isRecording) {
         e.preventDefault();
         stopManually();
       }
@@ -99,12 +106,12 @@ export function PackingRecorder() {
 
           {/* Status bar */}
           <Card size="small" style={{ marginTop: 8 }}>
-            <Row justify="space-between" align="middle">
+            <Row justify="space-between" align="middle" gutter={12}>
               <Col>
                 Trạng thái:{' '}
                 <Tag color={state === 'RECORDING' ? 'red' : state === 'SAVING' ? 'orange' : 'default'}>
                   {state === 'IDLE'
-                    ? 'Chờ QR'
+                    ? 'Chờ quét'
                     : state === 'RECORDING'
                       ? 'Đang quay'
                       : state === 'SAVING'
@@ -112,36 +119,28 @@ export function PackingRecorder() {
                         : 'Kiểm tra trùng'}
                 </Tag>
               </Col>
-              <Col>
-                <Text type="secondary">Nhấn Enter/Space để dừng quay</Text>
+              <Col flex="auto">
+                {state === 'IDLE' && (
+                  <Input.Search
+                    placeholder="Nhập mã vận đơn..."
+                    enterButton="Bắt đầu"
+                    size="small"
+                    onSearch={(value) => {
+                      if (value.trim()) handleScannerInput(value.trim());
+                    }}
+                  />
+                )}
+                {state === 'RECORDING' && (
+                  <Text type="secondary">Nhấn Escape để dừng quay</Text>
+                )}
               </Col>
             </Row>
           </Card>
         </Col>
 
-        {/* Right: Order info + session */}
+        {/* Right: Camera settings + session */}
         <Col span={10}>
-          <Card
-            title={
-              <span>
-                <VideoCameraOutlined /> Thông tin đơn hàng
-              </span>
-            }
-            size="small"
-          >
-            {shippingCode ? (
-              <>
-                <Text strong>Mã vận đơn: </Text>
-                <Text>{shippingCode}</Text>
-                <OrderItemsTable items={orderItems} scanCounts={scanCounts} />
-              </>
-            ) : (
-              <Text type="secondary">Quét QR mã vận đơn để bắt đầu...</Text>
-            )}
-          </Card>
-
           <Collapse
-            style={{ marginTop: 8 }}
             defaultActiveKey={['camera']}
             items={[
               {
@@ -152,13 +151,29 @@ export function PackingRecorder() {
             ]}
           />
 
-          <Divider style={{ margin: '12px 0' }} />
-
-          <Card title="Phiên làm việc" size="small">
+          <Card title="Phiên làm việc" size="small" style={{ marginTop: 8 }}>
             <SessionCache type="PACKING" />
           </Card>
         </Col>
       </Row>
+
+      {/* Order info - full width below */}
+      <Card
+        title={
+          <span>
+            <VideoCameraOutlined /> Thông tin đơn hàng
+            {shippingCode && <span style={{ fontWeight: 'normal', marginLeft: 12 }}>MVD: {shippingCode}</span>}
+          </span>
+        }
+        size="small"
+        style={{ marginTop: 12 }}
+      >
+        {shippingCode ? (
+          <OrderItemsTable items={orderItems} scanCounts={scanCounts} />
+        ) : (
+          <Text type="secondary">Quét QR hoặc nhập mã vận đơn để bắt đầu...</Text>
+        )}
+      </Card>
 
       <DuplicateModal
         open={!!duplicateCode}
