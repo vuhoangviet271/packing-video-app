@@ -1,12 +1,16 @@
-import { useState, useEffect } from 'react';
-import { Select, Typography, Space, Button, Input } from 'antd';
+import { useState, useEffect, type RefObject } from 'react';
+import { Select, Typography, Space, Input, message } from 'antd';
 import { FolderOpenOutlined } from '@ant-design/icons';
 import { useCameraDevices } from '../../hooks/useCameraDevices';
 import { useCameraStore } from '../../stores/camera.store';
 
 const { Text } = Typography;
 
-export function CameraSelector() {
+interface CameraSelectorProps {
+  qrVideoRef?: RefObject<HTMLVideoElement | null>;
+}
+
+export function CameraSelector({ qrVideoRef }: CameraSelectorProps) {
   const devices = useCameraDevices();
   const { cam1DeviceId, cam2DeviceId, setCam1, setCam2 } = useCameraStore();
   const [videoDir, setVideoDir] = useState<string>('');
@@ -18,8 +22,12 @@ export function CameraSelector() {
   const handleSelectDir = async () => {
     const dir = await window.electronAPI.selectDirectory();
     if (dir) {
-      await window.electronAPI.setVideoDir(dir);
-      setVideoDir(dir);
+      try {
+        await window.electronAPI.setVideoDir(dir);
+        setVideoDir(dir);
+      } catch {
+        message.error('Không có quyền ghi vào thư mục này. Vui lòng chọn thư mục khác.');
+      }
     }
   };
 
@@ -48,6 +56,28 @@ export function CameraSelector() {
           options={options}
           allowClear
         />
+        {cam2DeviceId && qrVideoRef && (
+          <div
+            style={{
+              marginTop: 8,
+              position: 'relative',
+              width: '100%',
+              aspectRatio: '1',
+              background: '#000',
+              borderRadius: 8,
+              overflow: 'hidden',
+            }}
+          >
+            <video
+              ref={qrVideoRef}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+            />
+          </div>
+        )}
       </div>
       <div>
         <Text strong>Thư mục lưu video:</Text>

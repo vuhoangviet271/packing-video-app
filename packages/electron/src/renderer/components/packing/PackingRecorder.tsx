@@ -25,7 +25,7 @@ export function PackingRecorder() {
     });
   }, []);
 
-  const { isRecording, duration, stopManually, handleScannerInput, state, shippingCode, orderItems, scanCounts } =
+  const { isRecording, duration, stopManually, handleScannerInput, qrVideoRef, state, shippingCode, orderItems, scanCounts } =
     useRecordingSession({
       type: 'PACKING',
       cam1Stream,
@@ -153,7 +153,7 @@ export function PackingRecorder() {
               {
                 key: 'camera',
                 label: 'Cài đặt Camera',
-                children: <CameraSelector />,
+                children: <CameraSelector qrVideoRef={qrVideoRef} />,
               },
             ]}
           />

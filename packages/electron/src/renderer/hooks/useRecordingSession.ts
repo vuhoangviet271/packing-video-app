@@ -118,7 +118,7 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
   }
 
   // Start QR scanner on Cam2
-  useQrScanner({
+  const { videoRef: qrVideoRef } = useQrScanner({
     deviceId: cameraStore.cam2DeviceId,
     onDetected: handleQrDetected,
     enabled: true,
@@ -324,6 +324,7 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
     duration,
     stopManually,
     handleScannerInput,
+    qrVideoRef,
     state: store.state,
     shippingCode: store.currentShippingCode,
     orderItems: store.orderItems,

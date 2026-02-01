@@ -1,14 +1,17 @@
 import { ipcMain, dialog, app } from 'electron';
-import { writeFile, mkdir, readFile } from 'fs/promises';
+import { writeFile, mkdir, readFile, access } from 'fs/promises';
+import { constants } from 'fs';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { hostname } from 'os';
 
-const settingsPath = join(app.getPath('userData'), 'app-settings.json');
+function getSettingsPath() {
+  return join(app.getPath('userData'), 'app-settings.json');
+}
 
 async function loadSettings(): Promise<Record<string, any>> {
   try {
-    const data = await readFile(settingsPath, 'utf-8');
+    const data = await readFile(getSettingsPath(), 'utf-8');
     return JSON.parse(data);
   } catch {
     return {};
@@ -16,7 +19,7 @@ async function loadSettings(): Promise<Record<string, any>> {
 }
 
 async function saveSettings(settings: Record<string, any>) {
-  await writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+  await writeFile(getSettingsPath(), JSON.stringify(settings, null, 2), 'utf-8');
 }
 
 function getDefaultVideoDir() {
@@ -30,8 +33,18 @@ async function getVideoDir() {
 
 export function registerFileIpc() {
   ipcMain.handle('save-video', async (_event, buffer: ArrayBuffer, fileName: string) => {
-    const videoDir = await getVideoDir();
-    if (!existsSync(videoDir)) await mkdir(videoDir, { recursive: true });
+    let videoDir = await getVideoDir();
+
+    // Kiểm tra thư mục có ghi được không, nếu không thì fallback về default
+    try {
+      if (!existsSync(videoDir)) await mkdir(videoDir, { recursive: true });
+      await access(videoDir, constants.W_OK);
+    } catch {
+      console.warn('Video dir not writable:', videoDir, '→ fallback to default');
+      videoDir = getDefaultVideoDir();
+      if (!existsSync(videoDir)) await mkdir(videoDir, { recursive: true });
+    }
+
     const filePath = join(videoDir, fileName);
     await writeFile(filePath, Buffer.from(buffer));
     return filePath;
@@ -46,6 +59,12 @@ export function registerFileIpc() {
   });
 
   ipcMain.handle('set-video-dir', async (_event, dir: string) => {
+    // Kiểm tra quyền ghi trước khi lưu
+    try {
+      await access(dir, constants.W_OK);
+    } catch {
+      throw new Error('Không có quyền ghi vào thư mục: ' + dir);
+    }
     const settings = await loadSettings();
     settings.videoDir = dir;
     await saveSettings(settings);

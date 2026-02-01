@@ -25,7 +25,7 @@ export function ReturnRecorder() {
     });
   }, []);
 
-  const { isRecording, duration, stopManually, handleScannerInput, state, shippingCode, returnScanEntries } =
+  const { isRecording, duration, stopManually, handleScannerInput, qrVideoRef, state, shippingCode, returnScanEntries } =
     useRecordingSession({
       type: 'RETURN',
       cam1Stream,
@@ -147,7 +147,7 @@ export function ReturnRecorder() {
               {
                 key: 'camera',
                 label: 'Cài đặt Camera',
-                children: <CameraSelector />,
+                children: <CameraSelector qrVideoRef={qrVideoRef} />,
               },
             ]}
           />

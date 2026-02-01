@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import QrScanner from 'qr-scanner';
 
 interface UseQrScannerOptions {
   deviceId: string;
@@ -8,13 +8,16 @@ interface UseQrScannerOptions {
 }
 
 export function useQrScanner({ deviceId, onDetected, enabled = true }: UseQrScannerOptions) {
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const scannerRef = useRef<QrScanner | null>(null);
   const lastCodeRef = useRef<string>('');
   const lastTimeRef = useRef<number>(0);
   const onDetectedRef = useRef(onDetected);
   onDetectedRef.current = onDetected;
 
-  const handleDetected = useCallback((text: string) => {
+  const handleDetected = useCallback((result: QrScanner.ScanResult) => {
+    const text = result.data;
+    if (!text) return;
     const now = Date.now();
     // Debounce: ignore same code within 2 seconds
     if (text === lastCodeRef.current && now - lastTimeRef.current < 2000) return;
@@ -26,44 +29,31 @@ export function useQrScanner({ deviceId, onDetected, enabled = true }: UseQrScan
   useEffect(() => {
     if (!deviceId || !enabled) return;
 
-    const containerId = 'qr-scanner-' + deviceId.slice(0, 8);
-    let container = document.getElementById(containerId);
-    if (!container) {
-      container = document.createElement('div');
-      container.id = containerId;
-      container.style.position = 'fixed';
-      container.style.left = '-9999px';
-      container.style.top = '-9999px';
-      container.style.width = '300px';
-      container.style.height = '300px';
-      document.body.appendChild(container);
-    }
+    const video = videoRef.current;
+    if (!video) return;
 
-    const scanner = new Html5Qrcode(containerId);
+    const scanner = new QrScanner(
+      video,
+      handleDetected,
+      {
+        maxScansPerSecond: 25,
+        highlightScanRegion: true,
+        highlightCodeOutline: true,
+        returnDetailedScanResult: true,
+      }
+    );
     scannerRef.current = scanner;
 
-    scanner
-      .start(
-        { deviceId: { exact: deviceId } },
-        { fps: 5, qrbox: { width: 250, height: 250 } },
-        handleDetected,
-        () => {} // ignore errors (no QR found in frame)
-      )
-      .catch((err) => console.error('QR scanner start failed:', err));
+    scanner.setCamera(deviceId).then(() => {
+      scanner.start().catch((err: unknown) => console.error('QR scanner start failed:', err));
+    }).catch((err: unknown) => console.error('QR scanner setCamera failed:', err));
 
     return () => {
-      try {
-        scanner
-          .stop()
-          .catch(() => {})
-          .finally(() => {
-            scannerRef.current = null;
-            container?.remove();
-          });
-      } catch {
-        scannerRef.current = null;
-        container?.remove();
-      }
+      scanner.stop();
+      scanner.destroy();
+      scannerRef.current = null;
     };
   }, [deviceId, enabled, handleDetected]);
+
+  return { videoRef };
 }
