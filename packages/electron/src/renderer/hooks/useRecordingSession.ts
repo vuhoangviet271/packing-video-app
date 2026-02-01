@@ -50,7 +50,7 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
         // It's a product barcode
         if (currentState !== 'RECORDING') return; // Ignore product scan when not recording
 
-        const { orderItems } = useRecordingStore.getState();
+        const { orderItems, scanCounts } = useRecordingStore.getState();
         const matchingItem = orderItems.find((item) => item.productId === product.id);
 
         if (type === 'RETURN') {
@@ -68,11 +68,29 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
         } else {
           // For packing: increment scan count
           if (matchingItem) {
-            useRecordingStore.getState().incrementScan(product.id);
-            playSound('scanSuccess');
+            const currentScanned = scanCounts[product.id] || 0;
+            if (currentScanned >= matchingItem.requiredQty) {
+              // Quét thừa — đã đủ rồi → đếm vào FOREIGN để hiện dòng riêng
+              useRecordingStore.getState().incrementScan('FOREIGN:' + product.id);
+              playSound('scanError');
+              useRecordingStore.getState().setForeignAlert({
+                productName: product.name,
+                sku: product.sku,
+                reason: 'excess',
+              });
+            } else {
+              useRecordingStore.getState().incrementScan(product.id);
+              playSound('scanSuccess');
+            }
           } else {
+            // SP lạ — không thuộc đơn hàng
             useRecordingStore.getState().incrementScan('FOREIGN:' + product.id);
             playSound('scanError');
+            useRecordingStore.getState().setForeignAlert({
+              productName: product.name,
+              sku: product.sku,
+              reason: 'foreign',
+            });
           }
         }
       } else {
@@ -230,13 +248,19 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
 
       // Deduct/return inventory
       if (type === 'PACKING') {
-        await inventoryApi.packingComplete({
-          shippingCode: currentShippingCode,
-          items: orderItems.map((item) => ({
+        // Chỉ trừ tồn kho theo số lượng thực tế đã quét, không phải requiredQty
+        const scannedItems = orderItems
+          .filter((item) => (scanCounts[item.productId] || 0) > 0)
+          .map((item) => ({
             productId: item.productId,
-            quantity: item.requiredQty,
-          })),
-        });
+            quantity: scanCounts[item.productId] || 0,
+          }));
+        if (scannedItems.length > 0) {
+          await inventoryApi.packingComplete({
+            shippingCode: currentShippingCode,
+            items: scannedItems,
+          });
+        }
       } else if (type === 'RETURN') {
         // Group return entries by productId + quality
         const grouped = new Map<string, { productId: string; quantity: number; quality: 'GOOD' | 'BAD' }>();

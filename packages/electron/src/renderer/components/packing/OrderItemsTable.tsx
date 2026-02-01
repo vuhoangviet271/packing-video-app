@@ -1,5 +1,6 @@
 import { Table, Tag } from 'antd';
 import type { ExpandedOrderItem } from '@packing/shared';
+import { useProductCacheStore } from '../../stores/product-cache.store';
 
 interface OrderItemsTableProps {
   items: ExpandedOrderItem[];
@@ -7,38 +8,47 @@ interface OrderItemsTableProps {
 }
 
 function getScanStatus(item: ExpandedOrderItem, scanned: number) {
-  if (scanned >= item.requiredQty) return 'complete';
+  if (scanned > item.requiredQty) return 'excess';
+  if (scanned === item.requiredQty) return 'complete';
   if (scanned > 0) return 'partial';
   return 'not_scanned';
 }
 
 const statusColors: Record<string, string> = {
+  excess: 'red',
   complete: 'green',
   partial: 'gold',
   not_scanned: 'default',
 };
 
 const statusLabels: Record<string, string> = {
+  excess: 'Thừa',
   complete: 'Đủ',
   partial: 'Thiếu',
   not_scanned: 'Chưa quét',
 };
 
 export function OrderItemsTable({ items, scanCounts }: OrderItemsTableProps) {
-  // Check for foreign scans
+  // Check for foreign scans — tra tên SP từ product cache
+  const productCache = useProductCacheStore();
   const foreignEntries = Object.entries(scanCounts)
     .filter(([key]) => key.startsWith('FOREIGN:'))
-    .map(([key, qty]) => ({
-      productId: key,
-      productName: 'Sản phẩm lạ',
-      sku: key.replace('FOREIGN:', '').slice(0, 8),
-      barcode: null,
-      imageUrl: null,
-      requiredQty: 0,
-      isComboComponent: false,
-      _scanned: qty,
-      _isForeign: true,
-    }));
+    .map(([key, qty]) => {
+      const realProductId = key.replace('FOREIGN:', '');
+      const cachedProducts = productCache.products;
+      const product = cachedProducts.find((p) => p.id === realProductId);
+      return {
+        productId: key,
+        productName: product?.name || 'Sản phẩm lạ',
+        sku: product?.sku || realProductId.slice(0, 8),
+        barcode: product?.barcode || null,
+        imageUrl: product?.imageUrl || null,
+        requiredQty: 0,
+        isComboComponent: false,
+        _scanned: qty,
+        _isForeign: true,
+      };
+    });
 
   const dataSource = [
     ...items.map((item, idx) => ({

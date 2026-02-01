@@ -2,6 +2,12 @@ import { create } from 'zustand';
 import type { RecordingState } from '@packing/shared';
 import type { ExpandedOrderItem } from '@packing/shared';
 
+export interface ForeignAlert {
+  productName: string;
+  sku: string;
+  reason: 'foreign' | 'excess';
+}
+
 export interface ReturnScanEntry {
   id: string;
   productId: string;
@@ -22,6 +28,7 @@ interface RecordingStore {
   orderItems: ExpandedOrderItem[];
   scanCounts: Record<string, number>; // productId -> scanned count
   returnScanEntries: ReturnScanEntry[];
+  foreignAlert: ForeignAlert | null;
   setState: (s: RecordingState) => void;
   setShippingCode: (code: string) => void;
   setDuration: (d: number) => void;
@@ -31,6 +38,7 @@ interface RecordingStore {
   addReturnScanEntry: (entry: Omit<ReturnScanEntry, 'id' | 'scannedAt'>) => void;
   updateReturnEntryQuality: (id: string, quality: 'GOOD' | 'BAD') => void;
   removeReturnScanEntry: (id: string) => void;
+  setForeignAlert: (alert: ForeignAlert | null) => void;
   reset: () => void;
 }
 
@@ -41,6 +49,7 @@ export const useRecordingStore = create<RecordingStore>((set) => ({
   orderItems: [],
   scanCounts: {},
   returnScanEntries: [],
+  foreignAlert: null,
   setState: (state) => set({ state }),
   setShippingCode: (code) => set({ currentShippingCode: code }),
   setDuration: (d) => set({ duration: d }),
@@ -67,6 +76,7 @@ export const useRecordingStore = create<RecordingStore>((set) => ({
     set((s) => ({
       returnScanEntries: s.returnScanEntries.filter((e) => e.id !== id),
     })),
+  setForeignAlert: (alert) => set({ foreignAlert: alert }),
   reset: () =>
     set({
       state: 'IDLE',
@@ -75,5 +85,6 @@ export const useRecordingStore = create<RecordingStore>((set) => ({
       orderItems: [],
       scanCounts: {},
       returnScanEntries: [],
+      foreignAlert: null,
     }),
 }));

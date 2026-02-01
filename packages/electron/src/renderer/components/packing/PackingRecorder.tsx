@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Row, Col, Typography, Tag, Badge, Divider, Collapse, Input } from 'antd';
-import { VideoCameraOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Typography, Tag, Badge, Divider, Collapse, Input, Modal } from 'antd';
+import { VideoCameraOutlined, WarningOutlined } from '@ant-design/icons';
 import { CameraPreview } from '../camera/CameraPreview';
 import { CameraSelector } from '../camera/CameraSelector';
 import { OrderItemsTable } from './OrderItemsTable';
 import { SessionCache } from './SessionCache';
 import { DuplicateModal } from './DuplicateModal';
 import { useRecordingSession } from '../../hooks/useRecordingSession';
+import { useRecordingStore } from '../../stores/recording.store';
 import { useCam1Stream } from '../../hooks/useCam1Stream';
 import { useScannerGun } from '../../hooks/useScannerGun';
 
@@ -48,6 +49,12 @@ export function PackingRecorder() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isRecording, stopManually]);
+
+  // Foreign/excess product alert
+  const foreignAlert = useRecordingStore((s) => s.foreignAlert);
+  const dismissForeignAlert = useCallback(() => {
+    useRecordingStore.getState().setForeignAlert(null);
+  }, []);
 
   const formatDuration = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
@@ -189,6 +196,32 @@ export function PackingRecorder() {
           setDuplicateResolve(null);
         }}
       />
+
+      <Modal
+        open={!!foreignAlert}
+        onOk={dismissForeignAlert}
+        onCancel={dismissForeignAlert}
+        cancelButtonProps={{ style: { display: 'none' } }}
+        okText="OK"
+        centered
+        title={
+          <span style={{ color: '#ff4d4f' }}>
+            <WarningOutlined /> {foreignAlert?.reason === 'excess' ? 'Sản phẩm quét thừa!' : 'Sản phẩm lạ!'}
+          </span>
+        }
+      >
+        <div style={{ fontSize: 16, padding: '12px 0' }}>
+          <p style={{ margin: '0 0 8px' }}>
+            <strong>{foreignAlert?.productName}</strong>
+            <span style={{ color: '#999', marginLeft: 8 }}>({foreignAlert?.sku})</span>
+          </p>
+          <p style={{ margin: 0, color: '#ff4d4f', fontWeight: 500 }}>
+            {foreignAlert?.reason === 'excess'
+              ? 'Sản phẩm này đã quét đủ số lượng. Hãy bỏ ra khỏi hộp!'
+              : 'Sản phẩm này không thuộc đơn hàng. Hãy bỏ ra khỏi hộp!'}
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 }
