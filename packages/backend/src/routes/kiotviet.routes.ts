@@ -16,7 +16,7 @@ async function getKiotVietToken(): Promise<string> {
 
   const res = await fetch('https://id.kiotviet.vn/connect/token', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept-Encoding': 'identity' },
     body: new URLSearchParams({
       grant_type: 'client_credentials',
       client_id: clientId,
@@ -49,6 +49,7 @@ export const kiotvietRoutes: FastifyPluginAsync = async (app) => {
       headers: {
         Retailer: retailer,
         Authorization: 'Bearer ' + token,
+        'Accept-Encoding': 'identity',
       },
     });
 
