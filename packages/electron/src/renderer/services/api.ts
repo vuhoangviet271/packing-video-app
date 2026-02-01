@@ -65,7 +65,7 @@ export const inventoryApi = {
 };
 
 export const dashboardApi = {
-  today: () => api.get('/dashboard/today'),
+  today: (params?: { from?: string; to?: string }) => api.get('/dashboard/today', { params }),
 };
 
 export const kiotvietApi = {
