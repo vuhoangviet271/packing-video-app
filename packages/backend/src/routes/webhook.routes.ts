@@ -24,22 +24,23 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
-  app.post('/kiotviet', async (request, reply) => {
+  app.post('/kiotviet', async (request) => {
     const webhookSecret = process.env.KIOTVIET_WEBHOOK_SECRET;
 
     // Verify signature nếu có cấu hình secret
+    // QUAN TRỌNG: Luôn trả 200 cho KiotViet, nếu trả 4xx thì KiotViet sẽ disable webhook
     if (webhookSecret) {
       const signature = request.headers['x-hub-signature'] as string;
       const rawBody = (request as any).rawBody as string;
 
       if (!signature || !rawBody) {
         app.log.warn('Webhook missing signature or body');
-        return reply.status(401).send({ error: 'Missing signature' });
+        return { success: false, reason: 'missing_signature' };
       }
 
       if (!verifyKiotVietSignature(rawBody, signature, webhookSecret)) {
         app.log.warn('Webhook signature mismatch');
-        return reply.status(401).send({ error: 'Invalid signature' });
+        return { success: false, reason: 'invalid_signature' };
       }
     }
 
@@ -110,7 +111,8 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
       return { success: true };
     } catch (error) {
       app.log.error(error);
-      return reply.status(500).send({ error: 'Webhook processing failed' });
+      // Luôn trả 200, không trả 5xx để KiotViet không disable webhook
+      return { success: false, reason: 'processing_error' };
     }
   });
 };
