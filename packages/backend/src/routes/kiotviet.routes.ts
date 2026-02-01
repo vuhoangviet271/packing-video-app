@@ -43,7 +43,7 @@ export const kiotvietRoutes: FastifyPluginAsync = async (app) => {
     const token = await getKiotVietToken();
 
     const url =
-      'https://public.kiotapi.com/invoices?SaleChannel=true&pageSize=200&includePayment=true&orderDirection=Desc&includeInvoiceDelivery=true';
+      'https://public.kiotapi.com/invoices?SaleChannel=true&pageSize=200&orderDirection=Desc&includeInvoiceDelivery=true';
 
     const res = await fetch(url, {
       headers: {
