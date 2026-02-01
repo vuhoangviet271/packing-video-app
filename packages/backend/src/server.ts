@@ -10,6 +10,7 @@ import { videoRoutes } from './routes/videos.routes.js';
 import { inventoryRoutes } from './routes/inventory.routes.js';
 import { dashboardRoutes } from './routes/dashboard.routes.js';
 import { webhookRoutes } from './routes/webhook.routes.js';
+import { kiotvietRoutes } from './routes/kiotviet.routes.js';
 
 const app = Fastify({ logger: true });
 
@@ -34,9 +35,34 @@ async function start() {
   await app.register(inventoryRoutes, { prefix: '/api/inventory' });
   await app.register(dashboardRoutes, { prefix: '/api/dashboard' });
   await app.register(webhookRoutes, { prefix: '/api/webhook' });
+  await app.register(kiotvietRoutes, { prefix: '/api/kiotviet' });
 
   const port = parseInt(process.env.PORT || '3001', 10);
   await app.listen({ port, host: '0.0.0.0' });
+
+  // Daily cleanup: orders 10 ngày, videos 3 tháng
+  async function dailyCleanup() {
+    try {
+      const orderCutoff = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
+      const videoCutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+
+      const orders = await app.prisma.order.deleteMany({
+        where: { createdAt: { lt: orderCutoff } },
+      });
+      const videos = await app.prisma.videoRecord.deleteMany({
+        where: { createdAt: { lt: videoCutoff } },
+      });
+
+      if (orders.count > 0 || videos.count > 0) {
+        app.log.info(`Cleanup: ${orders.count} orders, ${videos.count} videos deleted`);
+      }
+    } catch (err) {
+      app.log.error('Cleanup failed: ' + err);
+    }
+  }
+
+  await dailyCleanup();
+  setInterval(dailyCleanup, 24 * 60 * 60 * 1000);
 }
 
 start().catch((err) => {

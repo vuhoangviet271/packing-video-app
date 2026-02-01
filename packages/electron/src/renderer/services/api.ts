@@ -59,3 +59,7 @@ export const inventoryApi = {
 export const dashboardApi = {
   today: () => api.get('/dashboard/today'),
 };
+
+export const kiotvietApi = {
+  sync: () => api.post('/kiotviet/sync'),
+};

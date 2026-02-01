@@ -1,4 +1,5 @@
-import { Menu } from 'antd';
+import { useState } from 'react';
+import { Menu, Button, message } from 'antd';
 import {
   DashboardOutlined,
   VideoCameraOutlined,
@@ -6,8 +7,10 @@ import {
   InboxOutlined,
   UnorderedListOutlined,
   PlusOutlined,
+  SyncOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { kiotvietApi } from '../../services/api';
 
 const menuItems = [
   {
@@ -43,11 +46,37 @@ const menuItems = [
 export function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const res = await kiotvietApi.sync();
+      const { imported, skipped, total } = res.data;
+      message.success(`Đã đồng bộ ${imported} đơn mới (${skipped} đã có / ${total} tổng)`);
+    } catch (err: any) {
+      message.error('Đồng bộ thất bại: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: '16px 24px', fontSize: 18, fontWeight: 600, borderBottom: '1px solid #f0f0f0' }}>
         Packing Video
+      </div>
+      <div style={{ padding: '8px 16px' }}>
+        <Button
+          icon={<SyncOutlined spin={syncing} />}
+          onClick={handleSync}
+          loading={syncing}
+          block
+          type="primary"
+          ghost
+        >
+          Đồng bộ đơn
+        </Button>
       </div>
       <Menu
         mode="inline"
