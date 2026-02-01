@@ -6,4 +6,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getVideoDir: (): Promise<string> => ipcRenderer.invoke('get-video-dir'),
   getMachineName: (): Promise<string> => ipcRenderer.invoke('get-machine-name'),
   selectDirectory: (): Promise<string | null> => ipcRenderer.invoke('select-directory'),
+  setVideoDir: (dir: string): Promise<string> => ipcRenderer.invoke('set-video-dir', dir),
 });
