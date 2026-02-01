@@ -58,6 +58,13 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
         const orderList = Array.isArray(dataItems) ? dataItems : [dataItems];
 
         for (const orderData of orderList) {
+          // Chỉ xử lý đơn có InvoiceDelivery.Status = 1
+          const deliveryStatus = orderData.InvoiceDelivery?.Status;
+          if (deliveryStatus !== 1) {
+            app.log.info('Webhook: bỏ qua đơn có DeliveryStatus=' + deliveryStatus + ', Code=' + (orderData.Code || 'unknown'));
+            continue;
+          }
+
           // KiotViet dùng PascalCase: InvoiceDelivery.DeliveryCode
           const shippingCode = orderData.InvoiceDelivery?.DeliveryCode;
 
