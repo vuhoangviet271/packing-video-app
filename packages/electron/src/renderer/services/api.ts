@@ -69,5 +69,5 @@ export const dashboardApi = {
 };
 
 export const kiotvietApi = {
-  sync: () => api.post('/kiotviet/sync'),
+  sync: () => api.post('/kiotviet/sync', {}),
 };
