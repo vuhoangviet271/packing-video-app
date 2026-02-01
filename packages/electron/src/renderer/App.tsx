@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider, theme as antTheme } from 'antd';
 import viVN from 'antd/locale/vi_VN';
 import { MainLayout } from './components/layout/MainLayout';
@@ -40,7 +40,7 @@ export default function App() {
 
   return (
     <ConfigProvider locale={viVN} theme={{ algorithm: antTheme.defaultAlgorithm }}>
-      <BrowserRouter>
+      <HashRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route
@@ -48,7 +48,7 @@ export default function App() {
             element={isAuthenticated ? <ProtectedRoutes /> : <Navigate to="/login" replace />}
           />
         </Routes>
-      </BrowserRouter>
+      </HashRouter>
     </ConfigProvider>
   );
 }
