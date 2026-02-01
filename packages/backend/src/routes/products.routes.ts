@@ -82,7 +82,7 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     });
   });
 
-  app.put('/:id', { preHandler: [app.authenticate] }, async (request) => {
+  app.put('/:id', { preHandler: [app.authenticate] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const data = request.body as any;
     if (data.components) {
@@ -90,7 +90,15 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
       await app.prisma.comboComponent.createMany({ data: data.components.map((c: any) => ({ comboId: id, componentId: c.componentId, quantity: c.quantity })) });
       delete data.components;
     }
-    return app.prisma.product.update({ where: { id }, data, include: { comboComponents: { include: { component: true } } } });
+    try {
+      return await app.prisma.product.update({ where: { id }, data, include: { comboComponents: { include: { component: true } } } });
+    } catch (err: any) {
+      if (err.code === 'P2002') {
+        const field = err.meta?.target?.[0] || 'field';
+        return reply.status(409).send({ error: `${field} đã tồn tại ở sản phẩm khác` });
+      }
+      throw err;
+    }
   });
 
   app.delete('/:id', { preHandler: [app.authenticate] }, async (request, reply) => {

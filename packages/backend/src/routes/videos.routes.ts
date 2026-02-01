@@ -43,8 +43,8 @@ export const videoRoutes: FastifyPluginAsync = async (app) => {
     if (shippingCode) where.shippingCode = { contains: shippingCode };
     if (from || to) {
       where.createdAt = {};
-      if (from) where.createdAt.gte = new Date(from);
-      if (to) where.createdAt.lte = new Date(to);
+      if (from) where.createdAt.gte = new Date(from + 'T00:00:00+07:00');
+      if (to) where.createdAt.lte = new Date(to + 'T23:59:59.999+07:00');
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -98,8 +98,8 @@ export const videoRoutes: FastifyPluginAsync = async (app) => {
     if (staffId) where.staffId = staffId;
     if (from || to) {
       where.createdAt = {};
-      if (from) where.createdAt.gte = new Date(from);
-      if (to) where.createdAt.lte = new Date(to);
+      if (from) where.createdAt.gte = new Date(from + 'T00:00:00+07:00');
+      if (to) where.createdAt.lte = new Date(to + 'T23:59:59.999+07:00');
     }
 
     const records = await app.prisma.videoRecord.findMany({
