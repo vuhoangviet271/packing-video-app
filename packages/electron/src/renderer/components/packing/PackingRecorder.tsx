@@ -189,7 +189,6 @@ export function PackingRecorder() {
               </Col>
             </Row>
           </Card>
-        </Col>
 
           {/* Order info - same width as video */}
           <Card

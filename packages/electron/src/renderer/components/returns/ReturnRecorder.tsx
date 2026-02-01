@@ -183,7 +183,6 @@ export function ReturnRecorder() {
               </Col>
             </Row>
           </Card>
-        </Col>
 
           {/* Return items - same width as video */}
           <Card
