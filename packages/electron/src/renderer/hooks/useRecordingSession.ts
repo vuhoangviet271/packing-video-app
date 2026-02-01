@@ -136,8 +136,8 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
         const product = item.product;
         if (!product) continue;
 
-        if (product.isCombo && product.components) {
-          for (const comp of product.components) {
+        if (product.isCombo && product.comboComponents) {
+          for (const comp of product.comboComponents) {
             const existing = expandedItems.find((e) => e.productId === comp.component.id);
             if (existing) {
               existing.requiredQty += item.quantity * comp.quantity;
