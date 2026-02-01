@@ -13,7 +13,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const token = app.jwt.sign({ id: staff.id, username: staff.username });
     return {
       token,
-      staff: { id: staff.id, username: staff.username, fullName: staff.fullName, active: staff.active, createdAt: staff.createdAt.toISOString() },
+      staff: { id: staff.id, username: staff.username, fullName: staff.fullName, role: staff.role, active: staff.active, createdAt: staff.createdAt.toISOString() },
     };
   });
 
@@ -21,6 +21,6 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const { id } = request.user as { id: string };
     const staff = await app.prisma.staff.findUnique({ where: { id } });
     if (!staff) throw new Error('Staff not found');
-    return { id: staff.id, username: staff.username, fullName: staff.fullName, active: staff.active, createdAt: staff.createdAt.toISOString() };
+    return { id: staff.id, username: staff.username, fullName: staff.fullName, role: staff.role, active: staff.active, createdAt: staff.createdAt.toISOString() };
   });
 };

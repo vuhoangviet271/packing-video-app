@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Menu, Button, message } from 'antd';
 import {
   DashboardOutlined,
@@ -11,42 +11,52 @@ import {
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { kiotvietApi } from '../../services/api';
-
-const menuItems = [
-  {
-    key: '/dashboard',
-    icon: <DashboardOutlined />,
-    label: 'Tổng quan',
-  },
-  {
-    key: 'packing',
-    icon: <VideoCameraOutlined />,
-    label: 'Đóng hàng',
-    children: [
-      { key: '/packing/new', icon: <PlusOutlined />, label: 'Đăng mới' },
-      { key: '/packing/list', icon: <UnorderedListOutlined />, label: 'Danh sách' },
-    ],
-  },
-  {
-    key: 'returns',
-    icon: <RollbackOutlined />,
-    label: 'Nhập hàng hoàn',
-    children: [
-      { key: '/returns/new', icon: <PlusOutlined />, label: 'Đăng mới' },
-      { key: '/returns/list', icon: <UnorderedListOutlined />, label: 'Danh sách' },
-    ],
-  },
-  {
-    key: '/inventory',
-    icon: <InboxOutlined />,
-    label: 'Kho',
-  },
-];
+import { useAuth } from '../../hooks/useAuth';
 
 export function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [syncing, setSyncing] = useState(false);
+  const role = useAuth((s) => s.role);
+  const isAdmin = role === 'admin';
+
+  const menuItems = useMemo(() => {
+    const items: any[] = [
+      {
+        key: '/dashboard',
+        icon: <DashboardOutlined />,
+        label: 'Tổng quan',
+      },
+      {
+        key: 'packing',
+        icon: <VideoCameraOutlined />,
+        label: 'Đóng hàng',
+        children: [
+          { key: '/packing/new', icon: <PlusOutlined />, label: 'Đăng mới' },
+          { key: '/packing/list', icon: <UnorderedListOutlined />, label: 'Danh sách' },
+        ],
+      },
+      {
+        key: 'returns',
+        icon: <RollbackOutlined />,
+        label: 'Nhập hàng hoàn',
+        children: [
+          { key: '/returns/new', icon: <PlusOutlined />, label: 'Đăng mới' },
+          { key: '/returns/list', icon: <UnorderedListOutlined />, label: 'Danh sách' },
+        ],
+      },
+    ];
+
+    if (isAdmin) {
+      items.push({
+        key: '/inventory',
+        icon: <InboxOutlined />,
+        label: 'Kho',
+      });
+    }
+
+    return items;
+  }, [isAdmin]);
 
   const handleSync = async () => {
     setSyncing(true);

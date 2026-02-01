@@ -48,6 +48,14 @@ export const productApi = {
   createCombo: (data: any) => api.post('/products/combo', data),
   update: (id: string, data: any) => api.put('/products/' + id, data),
   delete: (id: string) => api.delete('/products/' + id),
+  uploadImage: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post<{ imageUrl: string }>('/products/upload-image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 30000,
+    });
+  },
 };
 
 export const inventoryApi = {

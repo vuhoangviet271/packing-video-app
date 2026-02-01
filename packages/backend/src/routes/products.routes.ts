@@ -1,6 +1,48 @@
 import type { FastifyPluginAsync } from 'fastify';
+import { createWriteStream, createReadStream } from 'fs';
+import { mkdir } from 'fs/promises';
+import { join } from 'path';
+import { pipeline } from 'stream/promises';
+import { randomUUID } from 'crypto';
+
+const UPLOADS_DIR = join(process.cwd(), 'uploads');
 
 export const productRoutes: FastifyPluginAsync = async (app) => {
+  // Ensure uploads directory exists
+  await mkdir(UPLOADS_DIR, { recursive: true });
+
+  // Serve uploaded images
+  app.get('/uploads/:filename', async (request, reply) => {
+    const { filename } = request.params as { filename: string };
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return reply.status(400).send({ error: 'Invalid filename' });
+    }
+    const filePath = join(UPLOADS_DIR, filename);
+    const ext = filename.split('.').pop()?.toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp',
+    };
+    reply.header('Content-Type', mimeTypes[ext || ''] || 'application/octet-stream');
+    reply.header('Cache-Control', 'public, max-age=86400');
+    return reply.send(createReadStream(filePath));
+  });
+
+  // Upload product image
+  app.post('/upload-image', { preHandler: [app.authenticate] }, async (request) => {
+    const data = await request.file();
+    if (!data) throw new Error('No file uploaded');
+
+    const ext = data.filename.split('.').pop()?.toLowerCase() || 'jpg';
+    const allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    if (!allowed.includes(ext)) throw new Error('Invalid file type');
+
+    const newFilename = `${randomUUID()}.${ext}`;
+    const filePath = join(UPLOADS_DIR, newFilename);
+    await pipeline(data.file, createWriteStream(filePath));
+
+    const imageUrl = `/api/products/uploads/${newFilename}`;
+    return { imageUrl };
+  });
   app.get('/', async (request) => {
     const { search, isCombo, page = '1', limit = '50' } = request.query as any;
     const skip = (parseInt(page) - 1) * parseInt(limit);

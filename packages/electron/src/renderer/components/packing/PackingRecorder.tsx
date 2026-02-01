@@ -8,6 +8,7 @@ import { SessionCache } from './SessionCache';
 import { DuplicateModal } from './DuplicateModal';
 import { useRecordingSession } from '../../hooks/useRecordingSession';
 import { useRecordingStore } from '../../stores/recording.store';
+import { useCameraStore } from '../../stores/camera.store';
 import { useCam1Stream } from '../../hooks/useCam1Stream';
 import { useScannerGun } from '../../hooks/useScannerGun';
 
@@ -15,6 +16,7 @@ const { Title, Text } = Typography;
 
 export function PackingRecorder() {
   const cam1Stream = useCam1Stream();
+  const cam2DeviceId = useCameraStore((s) => s.cam2DeviceId);
   const [showCam2, setShowCam2] = useState(true);
   const [duplicateCode, setDuplicateCode] = useState<string | null>(null);
   const [duplicateResolve, setDuplicateResolve] = useState<((v: boolean) => void) | null>(null);
@@ -109,42 +111,49 @@ export function PackingRecorder() {
                   <Text style={{ color: '#fff' }}>MVD: {shippingCode}</Text>
                 </div>
               )}
-              {/* Cam 2 overlay - góc trên phải */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  width: '20%',
-                  aspectRatio: '1',
-                  background: '#000',
-                  borderRadius: 6,
-                  overflow: 'hidden',
-                  border: '2px solid rgba(255,255,255,0.5)',
-                  zIndex: 10,
-                  display: showCam2 ? 'block' : 'none',
-                }}
-              >
-                <video
-                  ref={qrVideoRef}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              </div>
-              {/* Nút ẩn/hiện cam 2 */}
-              <Button
-                size="small"
-                icon={showCam2 ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-                onClick={() => setShowCam2(!showCam2)}
-                style={{
-                  position: 'absolute',
-                  top: 8,
-                  right: showCam2 ? 'calc(20% + 16px)' : 8,
-                  zIndex: 11,
-                  opacity: 0.8,
-                }}
-              >
-                Cam 2
-              </Button>
+              {/* Cam 2 overlay - góc trên phải (chỉ hiện khi đã chọn cam 2) */}
+              {cam2DeviceId && (
+                <>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      width: '20%',
+                      aspectRatio: '1',
+                      background: '#000',
+                      borderRadius: 6,
+                      overflow: 'hidden',
+                      border: '2px solid rgba(255,255,255,0.5)',
+                      zIndex: 10,
+                      display: showCam2 ? 'block' : 'none',
+                    }}
+                  >
+                    <video
+                      ref={qrVideoRef}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </div>
+                  <Button
+                    size="small"
+                    icon={showCam2 ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+                    onClick={() => setShowCam2(!showCam2)}
+                    style={{
+                      position: 'absolute',
+                      top: 8,
+                      right: showCam2 ? 'calc(20% + 16px)' : 8,
+                      zIndex: 11,
+                      opacity: 0.8,
+                    }}
+                  >
+                    Cam 2
+                  </Button>
+                </>
+              )}
+              {/* Hidden video element for QR scanner when cam2 not shown */}
+              {!cam2DeviceId && (
+                <video ref={qrVideoRef} style={{ display: 'none' }} />
+              )}
             </div>
           </Card>
 

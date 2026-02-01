@@ -1,21 +1,66 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Card, Table, Button, Modal, Form, Input, InputNumber, Space, Typography, message, Tabs, Popconfirm, Tag, Select,
+  Card, Table, Button, Modal, Form, Input, InputNumber, Space, Typography, message, Popconfirm, Tag, Select, Upload,
 } from 'antd';
-import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, EditOutlined, UploadOutlined } from '@ant-design/icons';
 import { productApi } from '../../services/api';
 
 const { Title } = Typography;
+
+const API_BASE_URL = localStorage.getItem('apiUrl') || 'https://pack.spotless.vn';
 
 interface ProductRow {
   id: string;
   sku: string;
   barcode: string | null;
   name: string;
+  imageUrl: string | null;
   isCombo: boolean;
   quantity: number;
   unsellableQty: number;
   components?: { component: { id: string; name: string; sku: string }; quantity: number }[];
+}
+
+function ImageUploadField({ value, onChange }: { value?: string; onChange?: (v: string) => void }) {
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const res = await productApi.uploadImage(file);
+      const imageUrl = res.data.imageUrl;
+      onChange?.(imageUrl);
+      message.success('Upload thành công');
+    } catch {
+      message.error('Upload thất bại');
+    } finally {
+      setUploading(false);
+    }
+    return false; // prevent default upload
+  };
+
+  const fullUrl = value && value.startsWith('/') ? API_BASE_URL + value : value;
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      {fullUrl && (
+        <img
+          src={fullUrl}
+          alt="product"
+          style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 4, border: '1px solid #d9d9d9' }}
+        />
+      )}
+      <Upload
+        showUploadList={false}
+        accept="image/*"
+        beforeUpload={(file) => { handleUpload(file as File); return false; }}
+      >
+        <Button icon={<UploadOutlined />} loading={uploading} size="small">
+          {value ? 'Đổi ảnh' : 'Upload ảnh'}
+        </Button>
+      </Upload>
+    </div>
+  );
 }
 
 export function InventoryPage() {
@@ -92,6 +137,20 @@ export function InventoryPage() {
   };
 
   const columns = [
+    {
+      title: 'Ảnh',
+      dataIndex: 'imageUrl',
+      key: 'imageUrl',
+      width: 60,
+      render: (url: string | null) => {
+        const fullUrl = url && url.startsWith('/') ? API_BASE_URL + url : url;
+        return fullUrl ? (
+          <img src={fullUrl} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} />
+        ) : (
+          <div style={{ width: 40, height: 40, background: '#f5f5f5', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc' }}>-</div>
+        );
+      },
+    },
     { title: 'SKU', dataIndex: 'sku', key: 'sku', width: 120 },
     {
       title: 'Tên sản phẩm',
@@ -191,6 +250,9 @@ export function InventoryPage() {
           <Form.Item name="name" label="Tên sản phẩm" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
+          <Form.Item name="imageUrl" label="Ảnh sản phẩm">
+            <ImageUploadField />
+          </Form.Item>
           <Form.Item name="quantity" label="Số lượng tồn" initialValue={0}>
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
@@ -215,6 +277,9 @@ export function InventoryPage() {
           </Form.Item>
           <Form.Item name="name" label="Tên combo" rules={[{ required: true }]}>
             <Input />
+          </Form.Item>
+          <Form.Item name="imageUrl" label="Ảnh combo">
+            <ImageUploadField />
           </Form.Item>
           <Form.List name="components">
             {(fields, { add, remove }) => (
@@ -275,6 +340,9 @@ export function InventoryPage() {
           </Form.Item>
           <Form.Item name="name" label="Tên sản phẩm">
             <Input />
+          </Form.Item>
+          <Form.Item name="imageUrl" label="Ảnh sản phẩm">
+            <ImageUploadField />
           </Form.Item>
           <Form.Item name="quantity" label="Số lượng tồn">
             <InputNumber min={0} style={{ width: '100%' }} />

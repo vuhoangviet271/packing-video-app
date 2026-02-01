@@ -74,7 +74,7 @@ export function OrderItemsTable({ items, scanCounts }: OrderItemsTableProps) {
             <img
               src={record.imageUrl}
               alt={name}
-              style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }}
+              style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }}
             />
           ) : (
             <div

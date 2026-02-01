@@ -12,6 +12,9 @@ import { LoginPage } from './components/auth/LoginPage';
 import { useAuth } from './hooks/useAuth';
 
 function ProtectedRoutes() {
+  const role = useAuth((s) => s.role);
+  const isAdmin = role === 'admin';
+
   return (
     <MainLayout>
       <Routes>
@@ -21,7 +24,7 @@ function ProtectedRoutes() {
         <Route path="/packing/list" element={<VideoListPage type="PACKING" />} />
         <Route path="/returns/new" element={<ReturnRecorder />} />
         <Route path="/returns/list" element={<VideoListPage type="RETURN" />} />
-        <Route path="/inventory" element={<InventoryPage />} />
+        <Route path="/inventory" element={isAdmin ? <InventoryPage /> : <Navigate to="/dashboard" replace />} />
       </Routes>
     </MainLayout>
   );

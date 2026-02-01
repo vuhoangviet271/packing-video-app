@@ -12,6 +12,7 @@ model Staff {
   username  String   @unique
   password  String
   fullName  String   @map("full_name")
+  role      String   @default("admin")
   active    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
   videos    VideoRecord[]
