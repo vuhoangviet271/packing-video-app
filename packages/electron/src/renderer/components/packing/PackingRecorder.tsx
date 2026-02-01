@@ -191,6 +191,25 @@ export function PackingRecorder() {
           </Card>
         </Col>
 
+          {/* Order info - same width as video */}
+          <Card
+            title={
+              <span>
+                <VideoCameraOutlined /> Thông tin đơn hàng
+                {shippingCode && <span style={{ fontWeight: 'normal', marginLeft: 12 }}>MVD: {shippingCode}</span>}
+              </span>
+            }
+            size="small"
+            style={{ marginTop: 12 }}
+          >
+            {shippingCode ? (
+              <OrderItemsTable items={orderItems} scanCounts={scanCounts} />
+            ) : (
+              <Text type="secondary">Quét QR hoặc nhập mã vận đơn để bắt đầu...</Text>
+            )}
+          </Card>
+        </Col>
+
         {/* Right: Camera settings + session */}
         <Col span={10}>
           <Collapse
@@ -204,29 +223,11 @@ export function PackingRecorder() {
             ]}
           />
 
-          <Card title="Phiên làm việc" size="small" style={{ marginTop: 8 }}>
+          <Card title="Phiên làm việc" size="small" style={{ marginTop: 8 }} bodyStyle={{ maxHeight: 480, overflowY: 'auto' }}>
             <SessionCache type="PACKING" />
           </Card>
         </Col>
       </Row>
-
-      {/* Order info - full width below */}
-      <Card
-        title={
-          <span>
-            <VideoCameraOutlined /> Thông tin đơn hàng
-            {shippingCode && <span style={{ fontWeight: 'normal', marginLeft: 12 }}>MVD: {shippingCode}</span>}
-          </span>
-        }
-        size="small"
-        style={{ marginTop: 12 }}
-      >
-        {shippingCode ? (
-          <OrderItemsTable items={orderItems} scanCounts={scanCounts} />
-        ) : (
-          <Text type="secondary">Quét QR hoặc nhập mã vận đơn để bắt đầu...</Text>
-        )}
-      </Card>
 
       <DuplicateModal
         open={!!duplicateCode}

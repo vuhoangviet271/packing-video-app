@@ -185,6 +185,32 @@ export function ReturnRecorder() {
           </Card>
         </Col>
 
+          {/* Return items - same width as video */}
+          <Card
+            title={
+              <span>
+                <RollbackOutlined /> Sản phẩm hoàn
+                {shippingCode && <span style={{ fontWeight: 'normal', marginLeft: 12 }}>MVD: {shippingCode}</span>}
+                {returnScanEntries.length > 0 && (
+                  <Tag style={{ marginLeft: 8 }}>{returnScanEntries.length} sản phẩm</Tag>
+                )}
+              </span>
+            }
+            size="small"
+            style={{ marginTop: 12 }}
+          >
+            {shippingCode ? (
+              <ReturnItemsTable
+                entries={returnScanEntries}
+                onQualityChange={handleQualityChange}
+                onRemove={handleRemoveEntry}
+              />
+            ) : (
+              <Text type="secondary">Quét QR hoặc nhập mã vận đơn để bắt đầu...</Text>
+            )}
+          </Card>
+        </Col>
+
         <Col span={10}>
           <Collapse
             defaultActiveKey={['camera']}
@@ -197,36 +223,11 @@ export function ReturnRecorder() {
             ]}
           />
 
-          <Card title="Phiên làm việc" size="small" style={{ marginTop: 8 }}>
+          <Card title="Phiên làm việc" size="small" style={{ marginTop: 8 }} bodyStyle={{ maxHeight: 480, overflowY: 'auto' }}>
             <SessionCache type="RETURN" />
           </Card>
         </Col>
       </Row>
-
-      {/* Return items - full width below */}
-      <Card
-        title={
-          <span>
-            <RollbackOutlined /> Sản phẩm hoàn
-            {shippingCode && <span style={{ fontWeight: 'normal', marginLeft: 12 }}>MVD: {shippingCode}</span>}
-            {returnScanEntries.length > 0 && (
-              <Tag style={{ marginLeft: 8 }}>{returnScanEntries.length} sản phẩm</Tag>
-            )}
-          </span>
-        }
-        size="small"
-        style={{ marginTop: 12 }}
-      >
-        {shippingCode ? (
-          <ReturnItemsTable
-            entries={returnScanEntries}
-            onQualityChange={handleQualityChange}
-            onRemove={handleRemoveEntry}
-          />
-        ) : (
-          <Text type="secondary">Quét QR hoặc nhập mã vận đơn để bắt đầu...</Text>
-        )}
-      </Card>
 
       <DuplicateModal
         open={!!duplicateCode}
