@@ -20,6 +20,7 @@ export function useCam1Stream() {
           deviceId: { exact: cam1DeviceId },
           width: { ideal: 1280 },
           height: { ideal: 720 },
+          frameRate: { ideal: 24 },
         },
         audio: false,
       })

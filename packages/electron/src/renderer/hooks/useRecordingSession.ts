@@ -222,7 +222,9 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
 
       // Save video file locally via IPC
       const arrayBuffer = await blob.arrayBuffer();
-      const fileName = `${type.toLowerCase()}_${currentShippingCode}_${Date.now()}.webm`;
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 19).replace(/T/, '_').replace(/:/g, '-');
+      const fileName = `${currentShippingCode}_${type.toLowerCase()}_${dateStr}.webm`;
       await window.electronAPI.saveVideo(arrayBuffer, fileName);
 
       // Get machine name

@@ -13,7 +13,9 @@ pnpm dev
 ```
 
 ## 2. Database (Prisma + SQLite)
-
+Rebuild + restart:
+pnpm build
+pm2 start packing-api
 ```bash
 # Mở Prisma Studio (GUI xem database trên trình duyệt)
 cd packages/backend
@@ -209,7 +211,7 @@ pm2 logs packing-api --lines 5
 
 # Bước 3: Kiểm tra log có nhận webhook không (xem 5 hoặc 10 dòng cuối)
 pm2 logs packing-api --lines 5
-pm2 logs packing-api --lines 10
+pm2 logs packing-api --lines 20
 
 # Bước 4: Kiểm tra đơn hàng đã vào database chưa
 cd packages/backend

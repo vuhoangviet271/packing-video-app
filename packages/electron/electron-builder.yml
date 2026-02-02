@@ -17,7 +17,6 @@ mac:
       arch:
         - x64
         - arm64
-  icon: build/icon.icns
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true

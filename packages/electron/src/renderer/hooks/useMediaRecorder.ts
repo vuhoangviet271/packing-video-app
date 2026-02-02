@@ -16,7 +16,7 @@ export function useMediaRecorder({ stream }: UseMediaRecorderOptions) {
     if (!stream) return;
     chunksRef.current = [];
     const recorder = new MediaRecorder(stream, {
-      mimeType: 'video/webm;codecs=vp8',
+      mimeType: 'video/webm;codecs=vp9',
       videoBitsPerSecond: 2_500_000,
     });
 
