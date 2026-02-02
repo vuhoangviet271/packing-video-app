@@ -99,7 +99,16 @@ export function PackingRecorder() {
             bodyStyle={{ padding: 0, position: 'relative' }}
             style={{ borderRadius: 8, overflow: 'hidden' }}
           >
-            <div style={{ position: 'relative', aspectRatio: '16/9', background: '#000' }}>
+            <div
+              style={{
+                position: 'relative',
+                width: '100%',
+                height: 'calc((100vh - 200px) * 0.45)', // 45% of available viewport height
+                maxHeight: '400px', // Max height to ensure space for products
+                minHeight: '250px', // Min height to keep video visible
+                background: '#000'
+              }}
+            >
               <CameraPreview stream={cam1Stream} />
               {/* Recording indicator */}
               {isRecording && (
@@ -225,7 +234,13 @@ export function PackingRecorder() {
               </span>
             }
             size="small"
-            style={{ marginTop: 12 }}
+            style={{
+              marginTop: 12,
+              minHeight: '480px', // Ensure enough space for 4 products + header
+            }}
+            bodyStyle={{
+              minHeight: '440px', // Space for table content
+            }}
           >
             {shippingCode ? (
               <OrderItemsTable items={orderItems} scanCounts={scanCounts} maxRows={4} />
