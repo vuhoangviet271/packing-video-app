@@ -18,8 +18,8 @@ export function useCam1Stream() {
       .getUserMedia({
         video: {
           deviceId: { exact: cam1DeviceId },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { min: 1280 },
+          height: { min: 720 },
           frameRate: { ideal: 24 },
         },
         audio: false,
