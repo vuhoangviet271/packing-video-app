@@ -97,15 +97,14 @@ export function PackingRecorder() {
         <Col span={14}>
           <Card
             bodyStyle={{ padding: 0, position: 'relative' }}
-            style={{ borderRadius: 8, overflow: 'hidden' }}
+            style={{ borderRadius: 8, overflow: 'hidden', maxWidth: '700px' }}
           >
             <div
               style={{
                 position: 'relative',
                 width: '100%',
-                height: 'calc((100vh - 200px) * 0.45)', // 45% of available viewport height
-                maxHeight: '400px', // Max height to ensure space for products
-                minHeight: '250px', // Min height to keep video visible
+                aspectRatio: '16/9', // Maintain 16:9 ratio (same as 720p video)
+                maxHeight: '395px', // Limit height to ~700px * 9/16 to ensure space for 4 products
                 background: '#000'
               }}
             >

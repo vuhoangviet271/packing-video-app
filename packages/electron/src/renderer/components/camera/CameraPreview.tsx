@@ -23,7 +23,7 @@ export function CameraPreview({ stream, style }: CameraPreviewProps) {
       style={{
         width: '100%',
         height: '100%',
-        objectFit: 'cover',
+        objectFit: 'contain', // Show full video without cropping
         background: '#000',
         borderRadius: 8,
         ...style,
