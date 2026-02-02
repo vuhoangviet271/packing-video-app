@@ -9,18 +9,60 @@ import { useSounds } from './useSounds';
 import { orderApi, videoApi, inventoryApi } from '../services/api';
 import type { ExpandedOrderItem, VideoType } from '@packing/shared';
 
+interface MissingItem {
+  productName: string;
+  sku: string;
+  required: number;
+  scanned: number;
+  missing: number;
+}
+
 interface UseRecordingSessionOptions {
   type: VideoType;
   cam1Stream: MediaStream | null;
   onDuplicateFound?: (shippingCode: string) => Promise<boolean>; // returns true = proceed
+  onIncompleteOrder?: (missingItems: MissingItem[]) => void;
 }
 
-export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseRecordingSessionOptions) {
+export function useRecordingSession({ type, cam1Stream, onDuplicateFound, onIncompleteOrder }: UseRecordingSessionOptions) {
   const store = useRecordingStore();
   const sessionStore = useSessionStore();
   const cameraStore = useCameraStore();
   const pendingQrRef = useRef<string | null>(null);
   const { play: playSound } = useSounds();
+
+  // Check if order is complete (all items scanned)
+  const checkOrderComplete = useCallback((): {
+    complete: boolean;
+    missingItems: MissingItem[];
+  } => {
+    const { orderItems, scanCounts } = useRecordingStore.getState();
+
+    // If no order items, always complete (allow stop)
+    if (orderItems.length === 0) {
+      return { complete: true, missingItems: [] };
+    }
+
+    const missingItems = orderItems
+      .map((item) => {
+        const scanned = scanCounts[item.productId] || 0;
+        const missing = item.requiredQty - scanned;
+
+        return {
+          productName: item.productName,
+          sku: item.sku,
+          required: item.requiredQty,
+          scanned,
+          missing,
+        };
+      })
+      .filter((item) => item.missing > 0);
+
+    return {
+      complete: missingItems.length === 0,
+      missingItems,
+    };
+  }, []);
 
   const { isRecording, duration, start: startRecorder, stop: stopRecorder } = useMediaRecorder({
     stream: cam1Stream,
@@ -110,6 +152,17 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
     if (currentState === 'IDLE') {
       await startNewRecording(code);
     } else if (currentState === 'RECORDING') {
+      // Validate order is complete before switching
+      const { complete, missingItems } = checkOrderComplete();
+
+      if (!complete) {
+        // Trigger callback to show modal in component
+        if (onIncompleteOrder) {
+          onIncompleteOrder(missingItems);
+        }
+        return; // Block switching
+      }
+
       // New shipping code during recording → save current, then start new
       pendingQrRef.current = code;
       await saveCurrentRecording();
@@ -333,5 +386,6 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound }: UseR
     orderItems: store.orderItems,
     scanCounts: store.scanCounts,
     returnScanEntries: store.returnScanEntries,
+    checkOrderComplete,
   };
 }

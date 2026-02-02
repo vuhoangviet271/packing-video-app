@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Row, Col, Typography, Tag, Badge, Divider, Collapse, Input, Modal, Button } from 'antd';
+import { Card, Row, Col, Typography, Tag, Badge, Divider, Collapse, Input, Modal, Button, Table } from 'antd';
 import { VideoCameraOutlined, WarningOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import { CameraPreview } from '../camera/CameraPreview';
 import { CameraSelector } from '../camera/CameraSelector';
@@ -14,12 +14,22 @@ import { useScannerGun } from '../../hooks/useScannerGun';
 
 const { Title, Text } = Typography;
 
+interface MissingItem {
+  productName: string;
+  sku: string;
+  required: number;
+  scanned: number;
+  missing: number;
+}
+
 export function PackingRecorder() {
   const cam1Stream = useCam1Stream();
   const cam2DeviceId = useCameraStore((s) => s.cam2DeviceId);
   const [showCam2, setShowCam2] = useState(true);
   const [duplicateCode, setDuplicateCode] = useState<string | null>(null);
   const [duplicateResolve, setDuplicateResolve] = useState<((v: boolean) => void) | null>(null);
+  const [incompleteModalOpen, setIncompleteModalOpen] = useState(false);
+  const [missingItems, setMissingItems] = useState<MissingItem[]>([]);
 
   const handleDuplicateFound = useCallback(async (code: string): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -28,11 +38,17 @@ export function PackingRecorder() {
     });
   }, []);
 
-  const { isRecording, duration, stopManually, handleScannerInput, qrVideoRef, state, shippingCode, orderItems, scanCounts } =
+  const handleIncompleteOrder = useCallback((items: MissingItem[]) => {
+    setMissingItems(items);
+    setIncompleteModalOpen(true);
+  }, []);
+
+  const { isRecording, duration, stopManually, handleScannerInput, qrVideoRef, state, shippingCode, orderItems, scanCounts, checkOrderComplete } =
     useRecordingSession({
       type: 'PACKING',
       cam1Stream,
       onDuplicateFound: handleDuplicateFound,
+      onIncompleteOrder: handleIncompleteOrder,
     });
 
   // Scanner gun integration
@@ -43,15 +59,25 @@ export function PackingRecorder() {
 
   // Keyboard shortcut: Escape to stop recording
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isRecording) {
         e.preventDefault();
-        stopManually();
+
+        // Validate before stopping
+        const { complete, missingItems: items } = checkOrderComplete();
+
+        if (!complete) {
+          setMissingItems(items);
+          setIncompleteModalOpen(true);
+          return; // Block ESC
+        }
+
+        await stopManually();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isRecording, stopManually]);
+  }, [isRecording, stopManually, checkOrderComplete]);
 
   // Foreign/excess product alert
   const foreignAlert = useRecordingStore((s) => s.foreignAlert);
@@ -202,7 +228,7 @@ export function PackingRecorder() {
             style={{ marginTop: 12 }}
           >
             {shippingCode ? (
-              <OrderItemsTable items={orderItems} scanCounts={scanCounts} />
+              <OrderItemsTable items={orderItems} scanCounts={scanCounts} maxRows={4} />
             ) : (
               <Text type="secondary">Quét QR hoặc nhập mã vận đơn để bắt đầu...</Text>
             )}
@@ -267,6 +293,75 @@ export function PackingRecorder() {
               : 'Sản phẩm này không thuộc đơn hàng. Hãy bỏ ra khỏi hộp!'}
           </p>
         </div>
+      </Modal>
+
+      <Modal
+        title={
+          <span style={{ color: '#ff4d4f' }}>
+            ⚠️ Đơn hàng chưa quét đủ
+          </span>
+        }
+        open={incompleteModalOpen}
+        onCancel={() => setIncompleteModalOpen(false)}
+        footer={[
+          <Button key="ok" type="primary" onClick={() => setIncompleteModalOpen(false)}>
+            Đã hiểu
+          </Button>
+        ]}
+        width={600}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ fontWeight: 'bold', color: '#ff4d4f' }}>
+            Không thể kết thúc ghi hình. Các sản phẩm sau chưa được quét đủ:
+          </p>
+        </div>
+
+        <Table
+          dataSource={missingItems.map((item, idx) => ({ ...item, key: idx }))}
+          columns={[
+            {
+              title: 'Sản phẩm',
+              dataIndex: 'productName',
+              key: 'productName',
+              render: (name: string, record: MissingItem) => (
+                <div>
+                  <div style={{ fontWeight: 'bold' }}>{name}</div>
+                  <div style={{ color: '#8c8c8c', fontSize: '12px' }}>
+                    SKU: {record.sku}
+                  </div>
+                </div>
+              )
+            },
+            {
+              title: 'Cần quét',
+              dataIndex: 'required',
+              key: 'required',
+              align: 'center' as const,
+              width: 100
+            },
+            {
+              title: 'Đã quét',
+              dataIndex: 'scanned',
+              key: 'scanned',
+              align: 'center' as const,
+              width: 100
+            },
+            {
+              title: 'Còn thiếu',
+              dataIndex: 'missing',
+              key: 'missing',
+              align: 'center' as const,
+              width: 100,
+              render: (missing: number) => (
+                <span style={{ color: '#ff4d4f', fontWeight: 'bold' }}>
+                  {missing}
+                </span>
+              )
+            }
+          ]}
+          pagination={false}
+          size="small"
+        />
       </Modal>
     </div>
   );
