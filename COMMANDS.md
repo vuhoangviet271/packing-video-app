@@ -234,3 +234,57 @@ File: `packages/backend/.env`
 | `JWT_SECRET` | Secret cho JWT token | `change-this-secret-in-production` |
 | `PORT` | Port backend | `3002` |
 | `KIOTVIET_WEBHOOK_SECRET` | Secret verify webhook (Base64) | Comment = tắt verify |
+
+🚀 Hướng dẫn Build Electron App
+📋 Yêu cầu trước khi build:
+Đã cài đặt dependencies:
+
+
+pnpm install
+Tạo icon cho app (nếu chưa có):
+
+
+mkdir -p packages/electron/build
+Đặt file icon.ico (256x256px) cho Windows
+Đặt file icon.icns (512x512px) cho Mac
+Hoặc đặt file icon.png (512x512px), electron-builder sẽ tự convert
+🪟 BUILD CHO WINDOWS
+Trên máy Windows:
+
+# Bước 1: Build code
+cd packages/electron
+pnpm run build
+
+# Bước 2: Package thành installer
+Mở powersell admin
+pnpm run package
+Hoặc từ root folder:
+
+# Build + Package một lệnh
+cd /Users/broviet/packing-video-app
+pnpm --filter electron build && pnpm --filter electron package -- --win
+Kết quả:
+File installer: packages/electron/release/Packing Video Setup 1.0.0.exe
+Format: NSIS installer (.exe)
+Architecture: x64 (64-bit)
+Người dùng có thể chọn thư mục cài đặt
+Tạo shortcut trên Desktop
+🍎 BUILD CHO MAC
+Trên máy Mac:
+
+# Bước 1: Build code
+cd packages/electron
+pnpm run build
+
+# Bước 2: Package thành DMG
+pnpm run package -- --mac
+Hoặc từ root folder:
+
+# Build + Package một lệnh
+cd /Users/broviet/packing-video-app
+pnpm --filter electron build && pnpm --filter electron package -- --mac
+Kết quả:
+File installer:
+packages/electron/release/Packing Video-1.0.0-x64.dmg (Intel Mac)
+packages/electron/release/Packing Video-1.0.0-arm64.dmg (Apple Silicon/M1/M2/M3)
+Format: DMG (Disk Image)

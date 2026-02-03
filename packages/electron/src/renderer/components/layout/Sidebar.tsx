@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Menu, Button, message } from 'antd';
+import { Menu, Button, message, Typography, Divider } from 'antd';
 import {
   DashboardOutlined,
   VideoCameraOutlined,
@@ -8,17 +8,25 @@ import {
   UnorderedListOutlined,
   PlusOutlined,
   SyncOutlined,
+  LogoutOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { kiotvietApi } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 
+const { Text } = Typography;
+
 export function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [syncing, setSyncing] = useState(false);
-  const role = useAuth((s) => s.role);
+  const { role, staffName, logout } = useAuth();
   const isAdmin = role === 'admin';
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const menuItems = useMemo(() => {
     const items: any[] = [
@@ -96,6 +104,22 @@ export function Sidebar() {
         onClick={({ key }) => navigate(key)}
         style={{ flex: 1, borderRight: 0 }}
       />
+
+      {/* User info and logout at bottom */}
+      <div style={{ borderTop: '1px solid #f0f0f0' }}>
+        <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text strong>{staffName}</Text>
+          <Button
+            type="text"
+            size="small"
+            icon={<LogoutOutlined />}
+            onClick={handleLogout}
+            danger
+          >
+            Thoát
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

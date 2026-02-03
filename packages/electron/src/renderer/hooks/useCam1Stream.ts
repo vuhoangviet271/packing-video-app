@@ -14,6 +14,8 @@ export function useCam1Stream() {
     let active = true;
     let currentStream: MediaStream | null = null;
 
+    console.log('[useCam1Stream] Requesting camera:', cam1DeviceId);
+
     navigator.mediaDevices
       .getUserMedia({
         video: {
@@ -25,22 +27,27 @@ export function useCam1Stream() {
         audio: false,
       })
       .then((s) => {
+        console.log('[useCam1Stream] Camera opened successfully, active tracks:', s.getTracks().length);
         if (active) {
           currentStream = s;
           setStream(s);
         } else {
+          console.log('[useCam1Stream] Component unmounted before stream ready, stopping tracks');
           s.getTracks().forEach((t) => t.stop());
         }
       })
       .catch((err) => {
-        console.error('Failed to open Cam1:', err);
+        console.error('[useCam1Stream] Failed to open Cam1:', err);
         if (active) setStream(null);
       });
 
     return () => {
+      console.log('[useCam1Stream] Cleanup: stopping tracks');
       active = false;
-      currentStream?.getTracks().forEach((t) => t.stop());
-      setStream(null);
+      if (currentStream) {
+        currentStream.getTracks().forEach((t) => t.stop());
+      }
+      // Don't set stream to null immediately - let next effect handle it
     };
   }, [cam1DeviceId]);
 

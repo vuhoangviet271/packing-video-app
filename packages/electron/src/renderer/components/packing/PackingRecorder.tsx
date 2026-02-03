@@ -92,20 +92,22 @@ export function PackingRecorder() {
     <div>
       <Title level={4}>Đóng hàng - Quay video</Title>
 
-      <Row gutter={16}>
+      <Row gutter={16} style={{ height: 'calc(100vh - 140px)' }}>
         {/* Left: Camera preview */}
-        <Col span={14}>
+        <Col span={14} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <Card
-            bodyStyle={{ padding: 0, position: 'relative' }}
-            style={{ borderRadius: 8, overflow: 'hidden', maxWidth: '700px' }}
+            bodyStyle={{ padding: 0, position: 'relative', height: '100%', display: 'flex' }}
+            style={{ borderRadius: 8, overflow: 'hidden', flex: 1, minHeight: 0 }}
           >
             <div
               style={{
                 position: 'relative',
                 width: '100%',
-                aspectRatio: '16/9', // Maintain 16:9 ratio (same as 720p video)
-                maxHeight: '395px', // Limit height to ~700px * 9/16 to ensure space for 4 products
-                background: '#000'
+                height: '100%',
+                background: '#000',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
             >
               <CameraPreview stream={cam1Stream} />
@@ -192,7 +194,7 @@ export function PackingRecorder() {
           </Card>
 
           {/* Status bar */}
-          <Card size="small" style={{ marginTop: 8 }}>
+          <Card size="small" style={{ marginTop: 8, flex: '0 0 auto' }}>
             <Row justify="space-between" align="middle" gutter={12}>
               <Col>
                 Trạng thái:{' '}
@@ -224,7 +226,7 @@ export function PackingRecorder() {
             </Row>
           </Card>
 
-          {/* Order info - same width as video */}
+          {/* Order info - fixed height for 4 products */}
           <Card
             title={
               <span>
@@ -235,10 +237,12 @@ export function PackingRecorder() {
             size="small"
             style={{
               marginTop: 12,
-              minHeight: '480px', // Ensure enough space for 4 products + header
+              flex: '0 0 auto',
+              maxHeight: '480px',
             }}
             bodyStyle={{
-              minHeight: '440px', // Space for table content
+              maxHeight: '440px',
+              overflowY: 'auto'
             }}
           >
             {shippingCode ? (

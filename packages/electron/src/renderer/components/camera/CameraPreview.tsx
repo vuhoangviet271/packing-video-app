@@ -9,9 +9,29 @@ export function CameraPreview({ stream, style }: CameraPreviewProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
+    const videoEl = videoRef.current;
+    if (!videoEl) return;
+
+    if (stream) {
+      console.log('[CameraPreview] Setting stream to video element, active tracks:', stream.getTracks().length);
+      videoEl.srcObject = stream;
+
+      // Ensure video plays after stream is assigned
+      videoEl.play()
+        .then(() => console.log('[CameraPreview] Video playing successfully'))
+        .catch(err => console.error('[CameraPreview] Video play failed:', err));
+    } else {
+      console.log('[CameraPreview] Stream is null, clearing video');
+      videoEl.srcObject = null;
     }
+
+    return () => {
+      // Clean up video element when stream changes
+      if (videoEl.srcObject) {
+        console.log('[CameraPreview] Cleanup: clearing video srcObject');
+        videoEl.srcObject = null;
+      }
+    };
   }, [stream]);
 
   return (
