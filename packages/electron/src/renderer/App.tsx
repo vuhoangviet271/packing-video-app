@@ -7,6 +7,7 @@ import { PackingRecorder } from './components/packing/PackingRecorder';
 import { ReturnRecorder } from './components/returns/ReturnRecorder';
 import { VideoListPage } from './components/videos/VideoListPage';
 import { InventoryPage } from './components/inventory/InventoryPage';
+import { InventoryLogPage } from './components/inventory/InventoryLogPage';
 import { DashboardPage } from './components/dashboard/DashboardPage';
 import { LoginPage } from './components/auth/LoginPage';
 import { useAuth } from './hooks/useAuth';
@@ -25,6 +26,7 @@ function ProtectedRoutes() {
         <Route path="/returns/new" element={<ReturnRecorder />} />
         <Route path="/returns/list" element={<VideoListPage type="RETURN" />} />
         <Route path="/inventory" element={isAdmin ? <InventoryPage /> : <Navigate to="/dashboard" replace />} />
+        <Route path="/inventory-log" element={isAdmin ? <InventoryLogPage /> : <Navigate to="/dashboard" replace />} />
       </Routes>
     </MainLayout>
   );

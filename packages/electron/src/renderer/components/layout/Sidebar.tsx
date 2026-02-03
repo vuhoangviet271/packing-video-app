@@ -61,6 +61,11 @@ export function Sidebar() {
         icon: <InboxOutlined />,
         label: 'Kho',
       });
+      items.push({
+        key: '/inventory-log',
+        icon: <UnorderedListOutlined />,
+        label: 'Lịch sử kho',
+      });
     }
 
     return items;

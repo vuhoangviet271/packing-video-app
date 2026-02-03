@@ -62,6 +62,8 @@ export const inventoryApi = {
   packingComplete: (data: any) => api.post('/inventory/packing-complete', data),
   returnComplete: (data: any) => api.post('/inventory/return-complete', data),
   manualAdjust: (data: any) => api.post('/inventory/manual-adjust', data),
+  getLogs: (params?: { page?: number; limit?: number; productId?: string; from?: string; to?: string; action?: string; search?: string }) =>
+    api.get('/inventory/logs', { params }),
 };
 
 export const dashboardApi = {

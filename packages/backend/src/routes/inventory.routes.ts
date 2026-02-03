@@ -42,4 +42,57 @@ export const inventoryRoutes: FastifyPluginAsync = async (app) => {
     ]);
     return { data, total, page: parseInt(page), limit: parseInt(limit) };
   });
+
+  // GET /logs - Lấy danh sách transaction log với product info (for admin UI)
+  app.get('/logs', async (request) => {
+    const { productId, page = '1', limit = '50', from, to, action, search } = request.query as any;
+    const where: any = {};
+    if (productId) where.productId = productId;
+    if (action) where.action = action;
+    if (from || to) {
+      where.createdAt = {};
+      if (from) where.createdAt.gte = new Date(from);
+      if (to) {
+        const toDate = new Date(to);
+        toDate.setHours(23, 59, 59, 999);
+        where.createdAt.lte = toDate;
+      }
+    }
+    if (search) {
+      where.OR = [
+        { reference: { contains: search } },
+        { product: { sku: { contains: search } } },
+        { product: { name: { contains: search } } },
+      ];
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const [transactions, total] = await Promise.all([
+      app.prisma.inventoryTransaction.findMany({
+        where,
+        include: {
+          product: {
+            select: {
+              id: true,
+              sku: true,
+              name: true,
+              barcode: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: parseInt(limit),
+      }),
+      app.prisma.inventoryTransaction.count({ where }),
+    ]);
+
+    return {
+      transactions,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / parseInt(limit)),
+    };
+  });
 };
