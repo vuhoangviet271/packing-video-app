@@ -6,7 +6,7 @@ const { Sider, Content } = Layout;
 export function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider width={220} theme="light" style={{ borderRight: '1px solid #f0f0f0' }}>
+      <Sider width={220} theme="light" style={{ borderRight: '1px solid #f0f0f0', height: '100vh', position: 'sticky', top: 0 }}>
         <Sidebar />
       </Sider>
       <Layout>

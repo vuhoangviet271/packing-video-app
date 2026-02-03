@@ -107,11 +107,15 @@ export function Sidebar() {
         defaultOpenKeys={['packing', 'returns']}
         items={menuItems}
         onClick={({ key }) => navigate(key)}
-        style={{ flex: 1, borderRight: 0 }}
+        style={{ flex: 1, borderRight: 0, overflow: 'auto' }}
       />
 
-      {/* User info and logout at bottom */}
-      <div style={{ borderTop: '1px solid #f0f0f0' }}>
+      {/* User info and logout - always visible at bottom */}
+      <div style={{
+        flexShrink: 0,
+        borderTop: '1px solid #f0f0f0',
+        background: '#fff',
+      }}>
         <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text strong>{staffName}</Text>
           <Button
