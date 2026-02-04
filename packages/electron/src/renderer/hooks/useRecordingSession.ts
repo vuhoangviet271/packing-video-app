@@ -285,9 +285,20 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound, onInco
       const staffId = localStorage.getItem('staffId') || '';
 
       // Build scanned items for API
-      const scannedItems = Object.entries(scanCounts)
-        .filter(([key]) => !key.startsWith('FOREIGN:'))
-        .map(([productId, scannedQty]) => ({ productId, scannedQty }));
+      let scannedItems;
+      if (type === 'RETURN') {
+        // For returns: use returnScanEntries with quality info
+        scannedItems = returnScanEntries.map((entry) => ({
+          productId: entry.productId,
+          scannedQty: 1,
+          returnQuality: entry.quality,
+        }));
+      } else {
+        // For packing: use scanCounts
+        scannedItems = Object.entries(scanCounts)
+          .filter(([key]) => !key.startsWith('FOREIGN:'))
+          .map(([productId, scannedQty]) => ({ productId, scannedQty }));
+      }
 
       // Create video record on server
       await videoApi.create({
