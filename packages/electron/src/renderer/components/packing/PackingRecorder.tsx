@@ -11,6 +11,7 @@ import { useRecordingStore } from '../../stores/recording.store';
 import { useCameraStore } from '../../stores/camera.store';
 import { useCam1Stream } from '../../hooks/useCam1Stream';
 import { useScannerGun } from '../../hooks/useScannerGun';
+import { useRotatedStream } from '../../hooks/useRotatedStream';
 
 const { Title, Text } = Typography;
 
@@ -23,8 +24,9 @@ interface MissingItem {
 }
 
 export function PackingRecorder() {
-  const cam1Stream = useCam1Stream();
-  const cam2DeviceId = useCameraStore((s) => s.cam2DeviceId);
+  const cam1StreamRaw = useCam1Stream();
+  const { cam2DeviceId, cam1Rotation, cam2Rotation } = useCameraStore();
+  const cam1Stream = useRotatedStream({ stream: cam1StreamRaw, rotation: cam1Rotation });
   const [showCam2, setShowCam2] = useState(true);
   const [duplicateCode, setDuplicateCode] = useState<string | null>(null);
   const [duplicateResolve, setDuplicateResolve] = useState<((v: boolean) => void) | null>(null);
@@ -110,7 +112,7 @@ export function PackingRecorder() {
                 justifyContent: 'center'
               }}
             >
-              <CameraPreview stream={cam1Stream} />
+              <CameraPreview stream={cam1Stream} rotation={cam1Rotation} />
               {/* Recording indicator */}
               {isRecording && (
                 <div
@@ -167,7 +169,7 @@ export function PackingRecorder() {
                   >
                     <video
                       ref={qrVideoRef}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `rotate(${cam2Rotation}deg)` }}
                     />
                   </div>
                   <Button
@@ -256,12 +258,13 @@ export function PackingRecorder() {
         {/* Right: Camera settings + session */}
         <Col span={10}>
           <Collapse
-            defaultActiveKey={['camera']}
+            activeKey={state === 'IDLE' ? ['camera'] : []}
             items={[
               {
                 key: 'camera',
                 label: 'Cài đặt Camera',
-                children: <CameraSelector />,
+                children: <CameraSelector disabled={state !== 'IDLE'} />,
+                collapsible: state !== 'IDLE' ? 'disabled' : undefined,
               },
             ]}
           />

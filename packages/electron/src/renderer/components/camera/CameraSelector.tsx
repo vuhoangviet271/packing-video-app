@@ -6,9 +6,13 @@ import { useCameraStore } from '../../stores/camera.store';
 
 const { Text } = Typography;
 
-export function CameraSelector() {
+interface CameraSelectorProps {
+  disabled?: boolean;
+}
+
+export function CameraSelector({ disabled = false }: CameraSelectorProps) {
   const devices = useCameraDevices();
-  const { cam1DeviceId, cam2DeviceId, setCam1, setCam2 } = useCameraStore();
+  const { cam1DeviceId, cam2DeviceId, cam1Rotation, cam2Rotation, setCam1, setCam2, setCam1Rotation, setCam2Rotation } = useCameraStore();
   const [videoDir, setVideoDir] = useState<string>('');
 
   useEffect(() => {
@@ -28,6 +32,12 @@ export function CameraSelector() {
   };
 
   const options = devices.map((d) => ({ label: d.label || d.deviceId.slice(0, 12), value: d.deviceId }));
+  const rotationOptions = [
+    { label: '0°', value: 0 },
+    { label: '90°', value: 90 },
+    { label: '180°', value: 180 },
+    { label: '270°', value: 270 },
+  ];
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="small">
@@ -40,7 +50,19 @@ export function CameraSelector() {
           onChange={setCam1}
           options={options}
           allowClear
+          disabled={disabled}
         />
+        <div style={{ marginTop: 4 }}>
+          <Text type="secondary" style={{ fontSize: 12 }}>Xoay camera: </Text>
+          <Select
+            size="small"
+            style={{ width: 100 }}
+            value={cam1Rotation}
+            onChange={setCam1Rotation}
+            options={rotationOptions}
+            disabled={disabled}
+          />
+        </div>
       </div>
       <div>
         <Text strong>Cam 2 - Đọc QR:</Text>
@@ -51,7 +73,19 @@ export function CameraSelector() {
           onChange={setCam2}
           options={options}
           allowClear
+          disabled={disabled}
         />
+        <div style={{ marginTop: 4 }}>
+          <Text type="secondary" style={{ fontSize: 12 }}>Xoay camera: </Text>
+          <Select
+            size="small"
+            style={{ width: 100 }}
+            value={cam2Rotation}
+            onChange={setCam2Rotation}
+            options={rotationOptions}
+            disabled={disabled}
+          />
+        </div>
       </div>
       <div>
         <Text strong>Thư mục lưu video:</Text>
@@ -62,6 +96,7 @@ export function CameraSelector() {
           onSearch={handleSelectDir}
           size="small"
           style={{ marginTop: 4 }}
+          disabled={disabled}
         />
       </div>
     </Space>

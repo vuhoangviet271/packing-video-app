@@ -3,9 +3,10 @@ import { useEffect, useRef } from 'react';
 interface CameraPreviewProps {
   stream: MediaStream | null;
   style?: React.CSSProperties;
+  rotation?: number; // 0, 90, 180, 270
 }
 
-export function CameraPreview({ stream, style }: CameraPreviewProps) {
+export function CameraPreview({ stream, style, rotation = 0 }: CameraPreviewProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -46,6 +47,7 @@ export function CameraPreview({ stream, style }: CameraPreviewProps) {
         objectFit: 'contain', // Show full video without cropping
         background: '#000',
         borderRadius: 8,
+        transform: `rotate(${rotation}deg)`,
         ...style,
       }}
     />
