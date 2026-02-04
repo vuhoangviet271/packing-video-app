@@ -112,7 +112,7 @@ export function PackingRecorder() {
                 justifyContent: 'center'
               }}
             >
-              <CameraPreview stream={cam1Stream} rotation={cam1Rotation} />
+              <CameraPreview stream={cam1Stream} rotation={0} />
               {/* Recording indicator */}
               {isRecording && (
                 <div

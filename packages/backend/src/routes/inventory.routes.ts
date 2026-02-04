@@ -79,6 +79,13 @@ export const inventoryRoutes: FastifyPluginAsync = async (app) => {
               barcode: true,
             },
           },
+          staff: {
+            select: {
+              id: true,
+              username: true,
+              fullName: true,
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip,

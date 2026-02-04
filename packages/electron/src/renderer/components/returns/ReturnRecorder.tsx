@@ -74,7 +74,7 @@ export function ReturnRecorder() {
         <Col span={14}>
           <Card bodyStyle={{ padding: 0 }} style={{ borderRadius: 8, overflow: 'hidden' }}>
             <div style={{ position: 'relative', aspectRatio: '16/9', background: '#000' }}>
-              <CameraPreview stream={cam1Stream} rotation={cam1Rotation} />
+              <CameraPreview stream={cam1Stream} rotation={0} />
               {isRecording && (
                 <div
                   style={{

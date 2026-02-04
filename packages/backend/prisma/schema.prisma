@@ -16,6 +16,7 @@ model Staff {
   active    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
   videos    VideoRecord[]
+  inventoryTransactions InventoryTransaction[]
   @@map("staff")
 }
 
@@ -102,12 +103,15 @@ model ScannedItem {
 }
 
 model InventoryTransaction {
-  id        String   @id @default(cuid())
-  productId String   @map("product_id")
-  action    String
-  quantity  Int
-  reference String?
-  createdAt DateTime @default(now()) @map("created_at")
-  product   Product  @relation(fields: [productId], references: [id])
+  id          String   @id @default(cuid())
+  productId   String   @map("product_id")
+  action      String
+  quantity    Int
+  reference   String?
+  staffId     String?  @map("staff_id")
+  machineName String?  @map("machine_name")
+  createdAt   DateTime @default(now()) @map("created_at")
+  product     Product  @relation(fields: [productId], references: [id])
+  staff       Staff?   @relation(fields: [staffId], references: [id])
   @@map("inventory_transactions")
 }

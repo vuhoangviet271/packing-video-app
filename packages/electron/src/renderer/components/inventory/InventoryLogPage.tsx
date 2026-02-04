@@ -13,12 +13,18 @@ interface InventoryLog {
   quantity: number;
   reference: string | null;
   createdAt: string;
+  machineName: string | null;
   product: {
     id: string;
     sku: string;
     name: string;
     barcode: string | null;
   };
+  staff: {
+    id: string;
+    username: string;
+    fullName: string;
+  } | null;
 }
 
 interface Filters {
@@ -33,6 +39,8 @@ const ACTION_OPTIONS = [
   { value: 'RETURN_GOOD', label: 'Hoàn tốt' },
   { value: 'RETURN_BAD', label: 'Hoàn xấu' },
   { value: 'MANUAL_ADJUST', label: 'Điều chỉnh' },
+  { value: 'DIRECT_EDIT', label: 'Sửa trực tiếp' },
+  { value: 'DIRECT_EDIT_UNSELLABLE', label: 'Sửa kho lỗi' },
 ];
 
 export function InventoryLogPage() {
@@ -126,6 +134,9 @@ export function InventoryLogPage() {
         return 'orange';
       case 'MANUAL_ADJUST':
         return 'blue';
+      case 'DIRECT_EDIT':
+      case 'DIRECT_EDIT_UNSELLABLE':
+        return 'purple';
       default:
         return 'default';
     }
@@ -141,6 +152,10 @@ export function InventoryLogPage() {
         return 'Hoàn xấu';
       case 'MANUAL_ADJUST':
         return 'Điều chỉnh';
+      case 'DIRECT_EDIT':
+        return 'Sửa trực tiếp';
+      case 'DIRECT_EDIT_UNSELLABLE':
+        return 'Sửa kho lỗi';
       default:
         return action;
     }
@@ -191,6 +206,26 @@ export function InventoryLogPage() {
       key: 'reference',
       width: 150,
       render: (ref: string | null) => ref || '-',
+    },
+    {
+      title: 'Người thực hiện',
+      key: 'staff',
+      width: 150,
+      render: (_: any, record: InventoryLog) => (
+        record.staff ? (
+          <div>
+            <div style={{ fontWeight: 'bold' }}>{record.staff.fullName}</div>
+            <div style={{ fontSize: 11, color: '#999' }}>@{record.staff.username}</div>
+          </div>
+        ) : '-'
+      ),
+    },
+    {
+      title: 'Máy',
+      dataIndex: 'machineName',
+      key: 'machineName',
+      width: 120,
+      render: (name: string | null) => name || '-',
     },
   ];
 

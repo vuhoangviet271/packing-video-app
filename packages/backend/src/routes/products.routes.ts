@@ -4,6 +4,7 @@ import { mkdir } from 'fs/promises';
 import { join } from 'path';
 import { pipeline } from 'stream/promises';
 import { randomUUID } from 'crypto';
+import { logDirectEdit } from '../services/inventory.service.js';
 
 const UPLOADS_DIR = join(process.cwd(), 'uploads');
 
@@ -85,13 +86,42 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
   app.put('/:id', { preHandler: [app.authenticate] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const data = request.body as any;
+    const user = request.user as { id: string };
+
+    // Get product hiện tại để check thay đổi quantity
+    const oldProduct = await app.prisma.product.findUnique({ where: { id } });
+    if (!oldProduct) {
+      return reply.status(404).send({ error: 'Product not found' });
+    }
+
     if (data.components) {
       await app.prisma.comboComponent.deleteMany({ where: { comboId: id } });
       await app.prisma.comboComponent.createMany({ data: data.components.map((c: any) => ({ comboId: id, componentId: c.componentId, quantity: c.quantity })) });
       delete data.components;
     }
+
     try {
-      return await app.prisma.product.update({ where: { id }, data, include: { comboComponents: { include: { component: true } } } });
+      const updated = await app.prisma.product.update({ where: { id }, data, include: { comboComponents: { include: { component: true } } } });
+
+      // Log nếu có thay đổi quantity hoặc unsellableQty
+      const quantityChanged = data.quantity !== undefined && data.quantity !== oldProduct.quantity;
+      const unsellableChanged = data.unsellableQty !== undefined && data.unsellableQty !== oldProduct.unsellableQty;
+
+      if (quantityChanged || unsellableChanged) {
+        const machineName = request.headers['x-machine-name'] as string || 'Web Admin';
+        await logDirectEdit(
+          app.prisma,
+          id,
+          oldProduct.quantity,
+          updated.quantity,
+          oldProduct.unsellableQty,
+          updated.unsellableQty,
+          user.id,
+          machineName
+        );
+      }
+
+      return updated;
     } catch (err: any) {
       if (err.code === 'P2002') {
         const field = err.meta?.target?.[0] || 'field';

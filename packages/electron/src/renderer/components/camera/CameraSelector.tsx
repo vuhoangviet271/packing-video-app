@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Select, Typography, Space, Input, message } from 'antd';
-import { FolderOpenOutlined } from '@ant-design/icons';
+import { Select, Typography, Space, Input, message, Button, Tooltip } from 'antd';
+import { FolderOpenOutlined, RotateRightOutlined } from '@ant-design/icons';
 import { useCameraDevices } from '../../hooks/useCameraDevices';
 import { useCameraStore } from '../../stores/camera.store';
 
@@ -32,59 +32,72 @@ export function CameraSelector({ disabled = false }: CameraSelectorProps) {
   };
 
   const options = devices.map((d) => ({ label: d.label || d.deviceId.slice(0, 12), value: d.deviceId }));
-  const rotationOptions = [
-    { label: '0°', value: 0 },
-    { label: '90°', value: 90 },
-    { label: '180°', value: 180 },
-    { label: '270°', value: 270 },
-  ];
+
+  // Hàm xoay camera cùng chiều kim đồng hồ (0 → 90 → 180 → 270 → 0)
+  const rotateCam1 = () => {
+    setCam1Rotation((cam1Rotation + 90) % 360);
+  };
+
+  const rotateCam2 = () => {
+    setCam2Rotation((cam2Rotation + 90) % 360);
+  };
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="small">
       <div>
         <Text strong>Cam 1 - Quay video:</Text>
-        <Select
-          style={{ width: '100%' }}
-          placeholder="Chọn camera quay video"
-          value={cam1DeviceId || undefined}
-          onChange={setCam1}
-          options={options}
-          allowClear
-          disabled={disabled}
-        />
-        <div style={{ marginTop: 4 }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>Xoay camera: </Text>
+        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
           <Select
-            size="small"
-            style={{ width: 100 }}
-            value={cam1Rotation}
-            onChange={setCam1Rotation}
-            options={rotationOptions}
+            style={{ flex: 1 }}
+            placeholder="Chọn camera quay video"
+            value={cam1DeviceId || undefined}
+            onChange={setCam1}
+            options={options}
+            allowClear
             disabled={disabled}
           />
+          <Tooltip title={`Xoay camera ${cam1Rotation > 0 ? `(${cam1Rotation}°)` : ''}`}>
+            <Button
+              type="default"
+              shape="circle"
+              icon={<RotateRightOutlined style={{ fontSize: 16 }} />}
+              onClick={rotateCam1}
+              disabled={disabled}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            />
+          </Tooltip>
         </div>
       </div>
       <div>
         <Text strong>Cam 2 - Đọc QR:</Text>
-        <Select
-          style={{ width: '100%' }}
-          placeholder="Chọn camera QR"
-          value={cam2DeviceId || undefined}
-          onChange={setCam2}
-          options={options}
-          allowClear
-          disabled={disabled}
-        />
-        <div style={{ marginTop: 4 }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>Xoay camera: </Text>
+        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
           <Select
-            size="small"
-            style={{ width: 100 }}
-            value={cam2Rotation}
-            onChange={setCam2Rotation}
-            options={rotationOptions}
+            style={{ flex: 1 }}
+            placeholder="Chọn camera QR"
+            value={cam2DeviceId || undefined}
+            onChange={setCam2}
+            options={options}
+            allowClear
             disabled={disabled}
           />
+          <Tooltip title={`Xoay camera ${cam2Rotation > 0 ? `(${cam2Rotation}°)` : ''}`}>
+            <Button
+              type="default"
+              shape="circle"
+              icon={<RotateRightOutlined style={{ fontSize: 16 }} />}
+              onClick={rotateCam2}
+              disabled={disabled}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            />
+          </Tooltip>
         </div>
       </div>
       <div>
