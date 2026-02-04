@@ -11,6 +11,7 @@ import { inventoryRoutes } from './routes/inventory.routes.js';
 import { dashboardRoutes } from './routes/dashboard.routes.js';
 import { webhookRoutes } from './routes/webhook.routes.js';
 import { kiotvietRoutes } from './routes/kiotviet.routes.js';
+import { startSyncScheduler } from './services/sync-scheduler.service.js';
 
 const app = Fastify({ logger: true });
 
@@ -39,6 +40,9 @@ async function start() {
 
   const port = parseInt(process.env.PORT || '3001', 10);
   await app.listen({ port, host: '0.0.0.0' });
+
+  // Khởi động scheduler tự động đồng bộ KiotViet
+  startSyncScheduler(app);
 
   // Daily cleanup: orders 10 ngày, videos 3 tháng
   async function dailyCleanup() {
