@@ -119,6 +119,8 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound, onInco
           playSound('scanSuccess');
         } else {
           // For packing: increment scan count
+          const hasOrderItems = orderItems.length > 0;
+
           if (matchingItem) {
             const currentScanned = scanCounts[product.id] || 0;
             if (currentScanned >= matchingItem.requiredQty) {
@@ -135,14 +137,21 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound, onInco
               playSound('scanSuccess');
             }
           } else {
-            // SP lạ — không thuộc đơn hàng
-            useRecordingStore.getState().incrementScan('FOREIGN:' + product.id);
-            playSound('scanError');
-            useRecordingStore.getState().setForeignAlert({
-              productName: product.name,
-              sku: product.sku,
-              reason: 'foreign',
-            });
+            // Nếu đơn không có trong database (orderItems rỗng), cho phép quét bất kỳ sản phẩm nào
+            if (!hasOrderItems) {
+              console.log('[Recording] Order not in database, allowing any product scan:', product.sku);
+              useRecordingStore.getState().incrementScan(product.id);
+              playSound('scanSuccess');
+            } else {
+              // SP lạ — không thuộc đơn hàng
+              useRecordingStore.getState().incrementScan('FOREIGN:' + product.id);
+              playSound('scanError');
+              useRecordingStore.getState().setForeignAlert({
+                productName: product.name,
+                sku: product.sku,
+                reason: 'foreign',
+              });
+            }
           }
         }
       } else {
