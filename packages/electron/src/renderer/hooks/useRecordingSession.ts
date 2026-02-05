@@ -85,9 +85,9 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound, onInco
       const currentState = useRecordingStore.getState().state;
       if (currentState === 'SAVING' || currentState === 'CHECK_DUPLICATE') return;
 
-      // Debounce: ignore duplicate scans within 500ms
+      // Debounce: ignore duplicate scans within 1000ms (3 seconds)
       const now = Date.now();
-      if (lastScanRef.current && lastScanRef.current.code === code && now - lastScanRef.current.timestamp < 500) {
+      if (lastScanRef.current && lastScanRef.current.code === code && now - lastScanRef.current.timestamp < 3000) {
         console.log('[Recording] Duplicate scan ignored:', code);
         return;
       }
