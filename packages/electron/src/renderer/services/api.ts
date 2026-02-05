@@ -48,6 +48,8 @@ export const productApi = {
   createCombo: (data: any) => api.post('/products/combo', data),
   update: (id: string, data: any) => api.put('/products/' + id, data),
   delete: (id: string) => api.delete('/products/' + id),
+  addBarcode: (productId: string, barcode: string) => api.post(`/products/${productId}/barcodes`, { barcode }),
+  deleteBarcode: (barcodeId: string) => api.delete(`/products/barcodes/${barcodeId}`),
   uploadImage: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);

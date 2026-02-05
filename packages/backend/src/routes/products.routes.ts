@@ -54,7 +54,13 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     if (isCombo !== undefined) where.isCombo = isCombo === 'true';
 
     const [data, total] = await Promise.all([
-      app.prisma.product.findMany({ where, include: { comboComponents: { include: { component: true } } }, skip, take: parseInt(limit), orderBy: { createdAt: 'desc' } }),
+      app.prisma.product.findMany({
+        where,
+        include: { comboComponents: { include: { component: true } }, additionalBarcodes: true },
+        skip,
+        take: parseInt(limit),
+        orderBy: { createdAt: 'desc' }
+      }),
       app.prisma.product.count({ where }),
     ]);
     return { data, total, page: parseInt(page), limit: parseInt(limit) };
@@ -62,7 +68,24 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
 
   app.get('/by-barcode/:barcode', async (request, reply) => {
     const { barcode } = request.params as { barcode: string };
-    const product = await app.prisma.product.findUnique({ where: { barcode }, include: { comboComponents: { include: { component: true } } } });
+
+    // Try main barcode first
+    let product = await app.prisma.product.findUnique({
+      where: { barcode },
+      include: { comboComponents: { include: { component: true } }, additionalBarcodes: true }
+    });
+
+    // If not found, search in additional barcodes
+    if (!product) {
+      const additionalBarcode = await app.prisma.productBarcode.findUnique({
+        where: { barcode },
+        include: { product: { include: { comboComponents: { include: { component: true } }, additionalBarcodes: true } } }
+      });
+      if (additionalBarcode) {
+        product = additionalBarcode.product;
+      }
+    }
+
     if (!product) return reply.status(404).send({ error: 'Product not found' });
     return product;
   });
@@ -134,6 +157,31 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
   app.delete('/:id', { preHandler: [app.authenticate] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     await app.prisma.product.delete({ where: { id } });
+    return reply.status(204).send();
+  });
+
+  // Add additional barcode to product
+  app.post('/:id/barcodes', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { barcode } = request.body as { barcode: string };
+
+    try {
+      const newBarcode = await app.prisma.productBarcode.create({
+        data: { productId: id, barcode }
+      });
+      return newBarcode;
+    } catch (err: any) {
+      if (err.code === 'P2002') {
+        return reply.status(409).send({ error: 'Barcode đã tồn tại' });
+      }
+      throw err;
+    }
+  });
+
+  // Delete additional barcode
+  app.delete('/barcodes/:barcodeId', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const { barcodeId } = request.params as { barcodeId: string };
+    await app.prisma.productBarcode.delete({ where: { id: barcodeId } });
     return reply.status(204).send();
   });
 };

@@ -19,6 +19,7 @@ interface ProductRow {
   quantity: number;
   unsellableQty: number;
   components?: { component: { id: string; name: string; sku: string }; quantity: number }[];
+  additionalBarcodes?: { id: string; barcode: string }[];
 }
 
 function ImageUploadField({ value, onChange }: { value?: string; onChange?: (v: string) => void }) {
@@ -69,6 +70,8 @@ export function InventoryPage() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [comboModalOpen, setComboModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductRow | null>(null);
+  const [newBarcode, setNewBarcode] = useState('');
+  const [addingBarcode, setAddingBarcode] = useState(false);
   const [form] = Form.useForm();
   const [comboForm] = Form.useForm();
 
@@ -133,6 +136,35 @@ export function InventoryPage() {
       fetchProducts();
     } catch {
       message.error('Lỗi xóa sản phẩm');
+    }
+  };
+
+  const handleAddBarcode = async () => {
+    if (!editingProduct || !newBarcode.trim()) return;
+    setAddingBarcode(true);
+    try {
+      await productApi.addBarcode(editingProduct.id, newBarcode.trim());
+      message.success('Thêm barcode thành công');
+      setNewBarcode('');
+      fetchProducts();
+    } catch (err: any) {
+      if (err.response?.status === 409) {
+        message.error('Barcode đã tồn tại');
+      } else {
+        message.error('Lỗi thêm barcode');
+      }
+    } finally {
+      setAddingBarcode(false);
+    }
+  };
+
+  const handleDeleteBarcode = async (barcodeId: string) => {
+    try {
+      await productApi.deleteBarcode(barcodeId);
+      message.success('Xóa barcode thành công');
+      fetchProducts();
+    } catch {
+      message.error('Lỗi xóa barcode');
     }
   };
 
@@ -214,20 +246,44 @@ export function InventoryPage() {
           loading={loading}
           pagination={{ pageSize: 50, showTotal: (t) => `Tổng: ${t} sản phẩm` }}
           expandable={{
-            expandedRowRender: (record) =>
-              record.isCombo && record.components ? (
+            expandedRowRender: (record) => {
+              const hasCombo = record.isCombo && record.components;
+              const hasBarcodes = record.additionalBarcodes && record.additionalBarcodes.length > 0;
+
+              if (!hasCombo && !hasBarcodes) return null;
+
+              return (
                 <div style={{ paddingLeft: 24 }}>
-                  <strong>Thành phần combo:</strong>
-                  <ul style={{ margin: '4px 0', paddingLeft: 20 }}>
-                    {record.components.map((c) => (
-                      <li key={c.component.id}>
-                        {c.component.name} ({c.component.sku}) x {c.quantity}
-                      </li>
-                    ))}
-                  </ul>
+                  {hasCombo && (
+                    <>
+                      <strong>Thành phần combo:</strong>
+                      <ul style={{ margin: '4px 0', paddingLeft: 20 }}>
+                        {record.components!.map((c) => (
+                          <li key={c.component.id}>
+                            {c.component.name} ({c.component.sku}) x {c.quantity}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                  {hasBarcodes && (
+                    <>
+                      <strong>Barcode phụ:</strong>
+                      <div style={{ marginTop: 4 }}>
+                        {record.additionalBarcodes!.map((bc) => (
+                          <Tag key={bc.id} style={{ marginBottom: 4, fontFamily: 'monospace' }}>
+                            {bc.barcode}
+                          </Tag>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
-              ) : null,
-            rowExpandable: (record) => record.isCombo,
+              );
+            },
+            rowExpandable: (record) =>
+              (record.isCombo && record.components && record.components.length > 0) ||
+              (record.additionalBarcodes && record.additionalBarcodes.length > 0),
           }}
         />
       </Card>
@@ -327,15 +383,16 @@ export function InventoryPage() {
       <Modal
         title="Sửa sản phẩm"
         open={!!editingProduct}
-        onCancel={() => { setEditingProduct(null); form.resetFields(); }}
+        onCancel={() => { setEditingProduct(null); form.resetFields(); setNewBarcode(''); }}
         onOk={() => form.submit()}
         okText="Lưu"
+        width={600}
       >
         <Form form={form} layout="vertical" onFinish={handleUpdate}>
           <Form.Item name="sku" label="SKU">
             <Input />
           </Form.Item>
-          <Form.Item name="barcode" label="Barcode">
+          <Form.Item name="barcode" label="Barcode chính">
             <Input />
           </Form.Item>
           <Form.Item name="name" label="Tên sản phẩm">
@@ -349,6 +406,48 @@ export function InventoryPage() {
           </Form.Item>
           <Form.Item name="unsellableQty" label="Số lượng lỗi">
             <InputNumber min={0} style={{ width: '100%' }} />
+          </Form.Item>
+
+          {/* Additional Barcodes Section */}
+          <Form.Item label="Barcode phụ">
+            <div style={{ border: '1px solid #d9d9d9', borderRadius: 6, padding: 12 }}>
+              {editingProduct?.additionalBarcodes && editingProduct.additionalBarcodes.length > 0 ? (
+                <div style={{ marginBottom: 12 }}>
+                  {editingProduct.additionalBarcodes.map((bc) => (
+                    <div
+                      key={bc.id}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '6px 8px',
+                        background: '#f5f5f5',
+                        borderRadius: 4,
+                        marginBottom: 8,
+                      }}
+                    >
+                      <span style={{ fontFamily: 'monospace' }}>{bc.barcode}</span>
+                      <Popconfirm title="Xóa barcode này?" onConfirm={() => handleDeleteBarcode(bc.id)}>
+                        <Button size="small" type="text" danger icon={<DeleteOutlined />} />
+                      </Popconfirm>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ color: '#999', marginBottom: 12, fontSize: 13 }}>Chưa có barcode phụ</div>
+              )}
+              <Space.Compact style={{ width: '100%' }}>
+                <Input
+                  placeholder="Nhập barcode mới"
+                  value={newBarcode}
+                  onChange={(e) => setNewBarcode(e.target.value)}
+                  onPressEnter={handleAddBarcode}
+                />
+                <Button type="primary" onClick={handleAddBarcode} loading={addingBarcode}>
+                  Thêm
+                </Button>
+              </Space.Compact>
+            </div>
           </Form.Item>
         </Form>
       </Modal>

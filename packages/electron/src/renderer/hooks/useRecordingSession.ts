@@ -29,6 +29,7 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound, onInco
   const sessionStore = useSessionStore();
   const cameraStore = useCameraStore();
   const pendingQrRef = useRef<string | null>(null);
+  const lastScanRef = useRef<{ code: string; timestamp: number } | null>(null);
   const { play: playSound } = useSounds();
 
   // Check if order is complete (all items scanned)
@@ -84,9 +85,18 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound, onInco
       const currentState = useRecordingStore.getState().state;
       if (currentState === 'SAVING' || currentState === 'CHECK_DUPLICATE') return;
 
+      // Debounce: ignore duplicate scans within 500ms
+      const now = Date.now();
+      if (lastScanRef.current && lastScanRef.current.code === code && now - lastScanRef.current.timestamp < 500) {
+        console.log('[Recording] Duplicate scan ignored:', code);
+        return;
+      }
+      lastScanRef.current = { code, timestamp: now };
+
       // Try product lookup from local cache (instant, no API call)
       // Use getState() to always read latest cache (avoids stale closure)
       const product = useProductCacheStore.getState().getByBarcode(code);
+      console.log('[Recording] Scanned code:', code, 'Product found:', !!product, 'State:', currentState);
 
       if (product) {
         // It's a product barcode
@@ -137,6 +147,7 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound, onInco
         }
       } else {
         // Not a product barcode → treat as shipping code
+        console.warn('[Recording] Barcode not found in product cache, treating as shipping code:', code);
         await handleShippingCode(code);
       }
     },
