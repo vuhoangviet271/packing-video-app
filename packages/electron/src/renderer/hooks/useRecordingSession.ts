@@ -23,9 +23,10 @@ interface UseRecordingSessionOptions {
   cam1Stream: MediaStream | null;
   onDuplicateFound?: (shippingCode: string) => Promise<boolean>; // returns true = proceed
   onIncompleteOrder?: (missingItems: MissingItem[]) => void;
+  onCameraNotReady?: () => void;
 }
 
-export function useRecordingSession({ type, cam1Stream, onDuplicateFound, onIncompleteOrder }: UseRecordingSessionOptions) {
+export function useRecordingSession({ type, cam1Stream, onDuplicateFound, onIncompleteOrder, onCameraNotReady }: UseRecordingSessionOptions) {
   const store = useRecordingStore();
   const sessionStore = useSessionStore();
   const cameraStore = useCameraStore();
@@ -205,6 +206,15 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound, onInco
   });
 
   async function startNewRecording(shippingCode: string) {
+    // Check if camera stream is available
+    if (!cam1Stream) {
+      console.error('[Recording] Cannot start - camera stream not available');
+      if (onCameraNotReady) {
+        onCameraNotReady();
+      }
+      return;
+    }
+
     store.setState('CHECK_DUPLICATE');
 
     // Check for duplicate
@@ -297,6 +307,21 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound, onInco
 
       if (blob.size === 0) {
         store.reset();
+        return;
+      }
+
+      // In demo mode, skip all saving and API calls
+      if (demoMode) {
+        console.log('[Demo Mode] Skipping video save and API calls');
+        sessionStore.addEntry({
+          shippingCode: currentShippingCode,
+          status: 'completed',
+          duration: dur,
+          type,
+          time: new Date().toLocaleTimeString('vi-VN'),
+        });
+        store.reset();
+        resetLastCode();
         return;
       }
 

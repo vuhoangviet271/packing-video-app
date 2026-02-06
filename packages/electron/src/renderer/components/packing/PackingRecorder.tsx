@@ -10,6 +10,7 @@ import { useRecordingSession } from '../../hooks/useRecordingSession';
 import { useRecordingStore } from '../../stores/recording.store';
 import { useCameraStore } from '../../stores/camera.store';
 import { useSettingsStore } from '../../stores/settings.store';
+import { useAuth } from '../../hooks/useAuth';
 import { useCam1Stream } from '../../hooks/useCam1Stream';
 import { useScannerGun } from '../../hooks/useScannerGun';
 import { useRotatedStream } from '../../hooks/useRotatedStream';
@@ -28,12 +29,15 @@ export function PackingRecorder() {
   const cam1StreamRaw = useCam1Stream();
   const { cam2DeviceId, cam1Rotation, cam2Rotation } = useCameraStore();
   const { demoMode, setDemoMode } = useSettingsStore();
+  const { role } = useAuth();
+  const isAdmin = role === 'admin';
   const cam1Stream = useRotatedStream({ stream: cam1StreamRaw, rotation: cam1Rotation });
   const [showCam2, setShowCam2] = useState(true);
   const [duplicateCode, setDuplicateCode] = useState<string | null>(null);
   const [duplicateResolve, setDuplicateResolve] = useState<((v: boolean) => void) | null>(null);
   const [incompleteModalOpen, setIncompleteModalOpen] = useState(false);
   const [missingItems, setMissingItems] = useState<MissingItem[]>([]);
+  const [cameraErrorOpen, setCameraErrorOpen] = useState(false);
 
   const handleDuplicateFound = useCallback(async (code: string): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -47,12 +51,17 @@ export function PackingRecorder() {
     setIncompleteModalOpen(true);
   }, []);
 
+  const handleCameraNotReady = useCallback(() => {
+    setCameraErrorOpen(true);
+  }, []);
+
   const { isRecording, duration, stopManually, handleScannerInput, qrVideoRef, state, shippingCode, orderItems, scanCounts, checkOrderComplete } =
     useRecordingSession({
       type: 'PACKING',
       cam1Stream,
       onDuplicateFound: handleDuplicateFound,
       onIncompleteOrder: handleIncompleteOrder,
+      onCameraNotReady: handleCameraNotReady,
     });
 
   // Scanner gun integration
@@ -217,19 +226,23 @@ export function PackingRecorder() {
                           ? 'Đang lưu...'
                           : 'Kiểm tra trùng'}
                   </Tag>
-                  <Divider type="vertical" />
-                  <Space size="small">
-                    <ExperimentOutlined style={{ color: demoMode ? '#ff4d4f' : '#999' }} />
-                    <Switch
-                      size="small"
-                      checked={demoMode}
-                      onChange={setDemoMode}
-                      disabled={state !== 'IDLE'}
-                    />
-                    <Text type={demoMode ? 'danger' : 'secondary'} style={{ fontSize: 12 }}>
-                      {demoMode ? 'Demo Mode' : 'Normal'}
-                    </Text>
-                  </Space>
+                  {isAdmin && (
+                    <>
+                      <Divider type="vertical" />
+                      <Space size="small">
+                        <ExperimentOutlined style={{ color: demoMode ? '#ff4d4f' : '#999' }} />
+                        <Switch
+                          size="small"
+                          checked={demoMode}
+                          onChange={setDemoMode}
+                          disabled={state !== 'IDLE'}
+                        />
+                        <Text type={demoMode ? 'danger' : 'secondary'} style={{ fontSize: 12 }}>
+                          {demoMode ? 'Demo Mode' : 'Normal'}
+                        </Text>
+                      </Space>
+                    </>
+                  )}
                 </Space>
               </Col>
               <Col flex="auto">
@@ -414,6 +427,35 @@ export function PackingRecorder() {
           pagination={false}
           size="small"
         />
+      </Modal>
+
+      <Modal
+        title={
+          <span style={{ color: '#ff4d4f' }}>
+            <WarningOutlined /> Camera chưa sẵn sàng
+          </span>
+        }
+        open={cameraErrorOpen}
+        onCancel={() => setCameraErrorOpen(false)}
+        footer={[
+          <Button key="ok" type="primary" onClick={() => setCameraErrorOpen(false)}>
+            Đã hiểu
+          </Button>
+        ]}
+      >
+        <div style={{ padding: '12px 0' }}>
+          <p style={{ margin: 0 }}>
+            Không thể bắt đầu quay video vì <strong>Camera 1</strong> chưa được chọn hoặc không hoạt động.
+          </p>
+          <p style={{ margin: '12px 0 0', color: '#666' }}>
+            Vui lòng kiểm tra:
+          </p>
+          <ul style={{ margin: '8px 0', paddingLeft: 20, color: '#666' }}>
+            <li>Camera đã được kết nối</li>
+            <li>Camera 1 đã được chọn trong phần "Cài đặt Camera"</li>
+            <li>Trình duyệt đã cấp quyền truy cập camera</li>
+          </ul>
+        </div>
       </Modal>
     </div>
   );
