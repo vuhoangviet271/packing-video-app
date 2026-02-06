@@ -270,7 +270,16 @@ export function PackingRecorder() {
             }}
           >
             {shippingCode ? (
-              <OrderItemsTable items={orderItems} scanCounts={scanCounts} maxRows={4} />
+              <>
+                {orderItems.length === 0 && (
+                  <div style={{ marginBottom: 8, padding: '8px 12px', background: '#e6f7ff', borderRadius: 4, border: '1px solid #91d5ff' }}>
+                    <Text type="secondary">
+                      <strong>Vận đơn lạ</strong> - Không tìm thấy thông tin đơn hàng. Quét sản phẩm để thêm vào danh sách.
+                    </Text>
+                  </div>
+                )}
+                <OrderItemsTable items={orderItems} scanCounts={scanCounts} maxRows={4} />
+              </>
             ) : (
               <Text type="secondary">Quét QR hoặc nhập mã vận đơn để bắt đầu...</Text>
             )}

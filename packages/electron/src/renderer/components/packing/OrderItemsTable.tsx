@@ -1,6 +1,8 @@
-import { Table, Tag } from 'antd';
+import { Table, Tag, Button, Space } from 'antd';
+import { MinusOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ExpandedOrderItem } from '@packing/shared';
 import { useProductCacheStore } from '../../stores/product-cache.store';
+import { useRecordingStore } from '../../stores/recording.store';
 
 interface OrderItemsTableProps {
   items: ExpandedOrderItem[];
@@ -52,6 +54,30 @@ const statusLabels: Record<string, string> = {
 export function OrderItemsTable({ items, scanCounts, maxRows = 4 }: OrderItemsTableProps) {
   // Check for foreign scans — tra tên SP từ product cache
   const productCache = useProductCacheStore();
+  const { decrementScan, removeScan } = useRecordingStore();
+  const isUnknownOrder = items.length === 0;
+
+  // For unknown orders, show all scanned products (non-FOREIGN)
+  const unknownOrderEntries = isUnknownOrder
+    ? Object.entries(scanCounts)
+        .filter(([key]) => !key.startsWith('FOREIGN:'))
+        .map(([productId, qty]) => {
+          const product = productCache.products.find((p) => p.id === productId);
+          return {
+            productId,
+            productName: product?.name || 'Sản phẩm',
+            sku: product?.sku || productId.slice(0, 8),
+            barcode: product?.barcode || null,
+            imageUrl: product?.imageUrl || null,
+            requiredQty: 0, // No requirement for unknown orders
+            isComboComponent: false,
+            _scanned: qty,
+            _isForeign: false,
+            _isUnknownOrder: true,
+          };
+        })
+    : [];
+
   const foreignEntries = Object.entries(scanCounts)
     .filter(([key]) => key.startsWith('FOREIGN:'))
     .map(([key, qty]) => {
@@ -68,6 +94,7 @@ export function OrderItemsTable({ items, scanCounts, maxRows = 4 }: OrderItemsTa
         isComboComponent: false,
         _scanned: qty,
         _isForeign: true,
+        _isUnknownOrder: false,
       };
     });
 
@@ -75,6 +102,10 @@ export function OrderItemsTable({ items, scanCounts, maxRows = 4 }: OrderItemsTa
   const getRowClassName = (record: any) => {
     if (record._isForeign) {
       return 'row-foreign'; // Red background
+    }
+
+    if (record._isUnknownOrder) {
+      return 'row-unknown'; // Blue background for unknown order items
     }
 
     const scanned = record._scanned;
@@ -98,6 +129,11 @@ export function OrderItemsTable({ items, scanCounts, maxRows = 4 }: OrderItemsTa
       ...item,
       _scanned: scanCounts[item.productId] || 0,
       _isForeign: false,
+      _isUnknownOrder: false,
+    })),
+    ...unknownOrderEntries.map((u, idx) => ({
+      key: 'unknown-' + idx,
+      ...u,
     })),
     ...foreignEntries.map((f, idx) => ({
       key: 'foreign-' + idx,
@@ -177,10 +213,52 @@ export function OrderItemsTable({ items, scanCounts, maxRows = 4 }: OrderItemsTa
         if (record._isForeign) {
           return <Tag color="red">Sản phẩm lạ</Tag>;
         }
+        if (record._isUnknownOrder) {
+          return <Tag color="blue">Đã quét</Tag>;
+        }
         const status = getScanStatus(record, record._scanned);
         return <Tag color={statusColors[status]}>{statusLabels[status]}</Tag>;
       },
     },
+    // Action column - only show for unknown orders or foreign products
+    ...(isUnknownOrder || foreignEntries.length > 0
+      ? [
+          {
+            title: '',
+            key: 'action',
+            width: 80,
+            align: 'center' as const,
+            render: (_: any, record: any) => {
+              // Only show actions for unknown order items or foreign items
+              if (!record._isUnknownOrder && !record._isForeign) {
+                return null;
+              }
+              const scanned = record._scanned || 0;
+              if (scanned === 0) return null;
+
+              return (
+                <Space size="small">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<MinusOutlined />}
+                    onClick={() => decrementScan(record.productId)}
+                    title="Giảm 1"
+                  />
+                  <Button
+                    type="text"
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => removeScan(record.productId)}
+                    title="Xóa tất cả"
+                  />
+                </Space>
+              );
+            },
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -210,6 +288,14 @@ export function OrderItemsTable({ items, scanCounts, maxRows = 4 }: OrderItemsTa
         .row-excess:hover,
         .row-foreign:hover {
           background-color: #ffccc7 !important;
+        }
+
+        .row-unknown {
+          background-color: #e6f7ff !important;
+        }
+
+        .row-unknown:hover {
+          background-color: #bae7ff !important;
         }
       `}</style>
 

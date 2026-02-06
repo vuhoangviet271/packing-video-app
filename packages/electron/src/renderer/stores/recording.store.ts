@@ -34,6 +34,8 @@ interface RecordingStore {
   setDuration: (d: number) => void;
   setOrderItems: (items: ExpandedOrderItem[]) => void;
   incrementScan: (productId: string) => void;
+  decrementScan: (productId: string) => void;
+  removeScan: (productId: string) => void;
   resetScanCounts: () => void;
   addReturnScanEntry: (entry: Omit<ReturnScanEntry, 'id' | 'scannedAt'>) => void;
   updateReturnEntryQuality: (id: string, quality: 'GOOD' | 'BAD') => void;
@@ -58,6 +60,21 @@ export const useRecordingStore = create<RecordingStore>((set) => ({
     set((s) => ({
       scanCounts: { ...s.scanCounts, [productId]: (s.scanCounts[productId] || 0) + 1 },
     })),
+  decrementScan: (productId) =>
+    set((s) => {
+      const current = s.scanCounts[productId] || 0;
+      if (current <= 1) {
+        // Remove the key entirely if count goes to 0
+        const { [productId]: _, ...rest } = s.scanCounts;
+        return { scanCounts: rest };
+      }
+      return { scanCounts: { ...s.scanCounts, [productId]: current - 1 } };
+    }),
+  removeScan: (productId) =>
+    set((s) => {
+      const { [productId]: _, ...rest } = s.scanCounts;
+      return { scanCounts: rest };
+    }),
   resetScanCounts: () => set({ scanCounts: {} }),
   addReturnScanEntry: (entry) =>
     set((s) => ({
