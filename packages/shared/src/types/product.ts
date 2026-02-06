@@ -1,3 +1,10 @@
+export interface ProductBarcode {
+  id: string;
+  productId: string;
+  barcode: string;
+  createdAt: string;
+}
+
 export interface Product {
   id: string;
   sku: string;
@@ -9,6 +16,7 @@ export interface Product {
   unsellableQty: number;
   createdAt: string;
   updatedAt: string;
+  additionalBarcodes?: ProductBarcode[];
 }
 
 export interface ComboComponent {

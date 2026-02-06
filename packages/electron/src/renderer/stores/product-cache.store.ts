@@ -28,8 +28,15 @@ export const useProductCacheStore = create<ProductCacheStore>((set, get) => ({
       const barcodeMap = new Map<string, Product>();
 
       for (const p of products) {
+        // Map main barcode
         if (p.barcode) {
           barcodeMap.set(p.barcode, p);
+        }
+        // Map additional barcodes
+        if (p.additionalBarcodes) {
+          for (const ab of p.additionalBarcodes) {
+            barcodeMap.set(ab.barcode, p);
+          }
         }
       }
 
