@@ -328,7 +328,9 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound, onInco
       // Save video file locally via IPC
       const arrayBuffer = await blob.arrayBuffer();
       const now = new Date();
-      const dateStr = now.toISOString().slice(0, 19).replace(/T/, '_').replace(/:/g, '-');
+      // Format date in Vietnam timezone (UTC+7)
+      const vnDate = now.toLocaleString('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh' });
+      const dateStr = vnDate.replace(' ', '_').replace(/:/g, '-');
       const fileName = `${currentShippingCode}_${type.toLowerCase()}_${dateStr}.webm`;
       await window.electronAPI.saveVideo(arrayBuffer, fileName);
 
@@ -366,17 +368,27 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound, onInco
 
       // Deduct/return inventory
       if (type === 'PACKING') {
-        // Chỉ trừ tồn kho theo số lượng thực tế đã quét, không phải requiredQty
-        const scannedItems = orderItems
-          .filter((item) => (scanCounts[item.productId] || 0) > 0)
-          .map((item) => ({
-            productId: item.productId,
-            quantity: scanCounts[item.productId] || 0,
-          }));
-        if (scannedItems.length > 0) {
+        let itemsToDeduct: { productId: string; quantity: number }[] = [];
+
+        if (orderItems.length > 0) {
+          // Known order: only deduct items that are in the order
+          itemsToDeduct = orderItems
+            .filter((item) => (scanCounts[item.productId] || 0) > 0)
+            .map((item) => ({
+              productId: item.productId,
+              quantity: scanCounts[item.productId] || 0,
+            }));
+        } else {
+          // Unknown order (vận đơn lạ): deduct all scanned items
+          itemsToDeduct = Object.entries(scanCounts)
+            .filter(([key]) => !key.startsWith('FOREIGN:'))
+            .map(([productId, quantity]) => ({ productId, quantity }));
+        }
+
+        if (itemsToDeduct.length > 0) {
           await inventoryApi.packingComplete({
             shippingCode: currentShippingCode,
-            items: scannedItems,
+            items: itemsToDeduct,
           });
         }
       } else if (type === 'RETURN') {
