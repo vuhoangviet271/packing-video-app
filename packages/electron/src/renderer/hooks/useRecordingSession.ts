@@ -3,6 +3,7 @@ import { useRecordingStore } from '../stores/recording.store';
 import { useSessionStore } from '../stores/session.store';
 import { useCameraStore } from '../stores/camera.store';
 import { useProductCacheStore } from '../stores/product-cache.store';
+import { useSettingsStore } from '../stores/settings.store';
 import { useMediaRecorder } from './useMediaRecorder';
 import { useQrScanner } from './useQrScanner';
 import { useSounds } from './useSounds';
@@ -28,6 +29,7 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound, onInco
   const store = useRecordingStore();
   const sessionStore = useSessionStore();
   const cameraStore = useCameraStore();
+  const { demoMode } = useSettingsStore();
   const pendingQrRef = useRef<string | null>(null);
   const lastScanRef = useRef<{ code: string; timestamp: number } | null>(null);
   const { play: playSound } = useSounds();
@@ -37,6 +39,11 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound, onInco
     complete: boolean;
     missingItems: MissingItem[];
   } => {
+    // In demo mode, always allow stopping
+    if (demoMode) {
+      return { complete: true, missingItems: [] };
+    }
+
     const { orderItems, scanCounts } = useRecordingStore.getState();
 
     // If no order items, always complete (allow stop)
@@ -63,7 +70,7 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound, onInco
       complete: missingItems.length === 0,
       missingItems,
     };
-  }, []);
+  }, [demoMode]);
 
   const { isRecording, duration, start: startRecorder, stop: stopRecorder } = useMediaRecorder({
     stream: cam1Stream,

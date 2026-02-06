@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Row, Col, Typography, Tag, Badge, Collapse, Input, Button } from 'antd';
-import { RollbackOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Typography, Tag, Badge, Collapse, Input, Button, Switch, Space, Divider } from 'antd';
+import { RollbackOutlined, EyeOutlined, EyeInvisibleOutlined, ExperimentOutlined } from '@ant-design/icons';
 import { CameraPreview } from '../camera/CameraPreview';
 import { CameraSelector } from '../camera/CameraSelector';
 import { ReturnItemsTable } from './ReturnItemsTable';
@@ -9,6 +9,7 @@ import { DuplicateModal } from '../packing/DuplicateModal';
 import { useRecordingSession } from '../../hooks/useRecordingSession';
 import { useRecordingStore } from '../../stores/recording.store';
 import { useCameraStore } from '../../stores/camera.store';
+import { useSettingsStore } from '../../stores/settings.store';
 import { useCam1Stream } from '../../hooks/useCam1Stream';
 import { useScannerGun } from '../../hooks/useScannerGun';
 import { useRotatedStream } from '../../hooks/useRotatedStream';
@@ -18,6 +19,7 @@ const { Title, Text } = Typography;
 export function ReturnRecorder() {
   const cam1StreamRaw = useCam1Stream();
   const { cam2DeviceId, cam1Rotation, cam2Rotation } = useCameraStore();
+  const { demoMode, setDemoMode } = useSettingsStore();
   const cam1Stream = useRotatedStream({ stream: cam1StreamRaw, rotation: cam1Rotation });
   const [showCam2, setShowCam2] = useState(true);
   const [duplicateCode, setDuplicateCode] = useState<string | null>(null);
@@ -157,16 +159,31 @@ export function ReturnRecorder() {
           <Card size="small" style={{ marginTop: 8 }}>
             <Row justify="space-between" align="middle" gutter={12}>
               <Col>
-                Trạng thái:{' '}
-                <Tag color={state === 'RECORDING' ? 'red' : state === 'SAVING' ? 'orange' : 'default'}>
-                  {state === 'IDLE'
-                    ? 'Chờ quét'
-                    : state === 'RECORDING'
-                      ? 'Đang quay'
-                      : state === 'SAVING'
-                        ? 'Đang lưu...'
-                        : 'Kiểm tra trùng'}
-                </Tag>
+                <Space>
+                  <span>Trạng thái:</span>
+                  <Tag color={state === 'RECORDING' ? 'red' : state === 'SAVING' ? 'orange' : 'default'}>
+                    {state === 'IDLE'
+                      ? 'Chờ quét'
+                      : state === 'RECORDING'
+                        ? 'Đang quay'
+                        : state === 'SAVING'
+                          ? 'Đang lưu...'
+                          : 'Kiểm tra trùng'}
+                  </Tag>
+                  <Divider type="vertical" />
+                  <Space size="small">
+                    <ExperimentOutlined style={{ color: demoMode ? '#ff4d4f' : '#999' }} />
+                    <Switch
+                      size="small"
+                      checked={demoMode}
+                      onChange={setDemoMode}
+                      disabled={state !== 'IDLE'}
+                    />
+                    <Text type={demoMode ? 'danger' : 'secondary'} style={{ fontSize: 12 }}>
+                      {demoMode ? 'Demo Mode' : 'Normal'}
+                    </Text>
+                  </Space>
+                </Space>
               </Col>
               <Col flex="auto">
                 {state === 'IDLE' && (
