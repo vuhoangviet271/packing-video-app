@@ -64,11 +64,14 @@ export function PackingRecorder() {
   // Keyboard shortcut: Escape to stop recording
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
+      console.log('[PackingRecorder] Key pressed:', e.key, 'isRecording:', isRecording);
       if (e.key === 'Escape' && isRecording) {
         e.preventDefault();
+        console.log('[PackingRecorder] Escape pressed while recording');
 
         // Validate before stopping
         const { complete, missingItems: items } = checkOrderComplete();
+        console.log('[PackingRecorder] checkOrderComplete result:', { complete, missingItems: items });
 
         if (!complete) {
           setMissingItems(items);
@@ -76,7 +79,9 @@ export function PackingRecorder() {
           return; // Block ESC
         }
 
+        console.log('[PackingRecorder] Calling stopManually...');
         await stopManually();
+        console.log('[PackingRecorder] stopManually completed');
       }
     };
     window.addEventListener('keydown', handleKeyDown);

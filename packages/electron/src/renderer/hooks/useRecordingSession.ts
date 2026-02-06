@@ -407,11 +407,18 @@ export function useRecordingSession({ type, cam1Stream, onDuplicateFound, onInco
 
   // Manual stop (Escape key)
   const stopManually = useCallback(async () => {
+    console.log('[Recording] stopManually called');
     const currentState = useRecordingStore.getState().state;
-    if (currentState !== 'RECORDING') return;
+    console.log('[Recording] Current state:', currentState);
+    if (currentState !== 'RECORDING') {
+      console.log('[Recording] Not in RECORDING state, ignoring stop');
+      return;
+    }
+    console.log('[Recording] Calling saveCurrentRecording...');
     await saveCurrentRecording();
+    console.log('[Recording] saveCurrentRecording completed');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [type, stopRecorder, resetLastCode]);
 
   return {
     isRecording,

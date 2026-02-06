@@ -47,10 +47,13 @@ export function ReturnRecorder() {
 
   // Keyboard shortcut: Escape to stop recording
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      console.log('[ReturnRecorder] Key pressed:', e.key, 'isRecording:', isRecording);
       if (e.key === 'Escape' && isRecording) {
         e.preventDefault();
-        stopManually();
+        console.log('[ReturnRecorder] Escape pressed, calling stopManually...');
+        await stopManually();
+        console.log('[ReturnRecorder] stopManually completed');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
