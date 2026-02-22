@@ -50,7 +50,7 @@ export function startSyncScheduler(app: FastifyInstance): void {
         app.log.debug(`Auto-sync: No new orders (${result.skipped} skipped, ${result.total} total)`);
       }
     } catch (error: any) {
-      app.log.error('Auto-sync failed:', error.message);
+      app.log.error('Auto-sync failed: ' + (error.message || error));
     }
   });
 

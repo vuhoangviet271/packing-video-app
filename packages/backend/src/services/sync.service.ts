@@ -80,6 +80,8 @@ export async function syncKiotVietOrders(app: FastifyInstance): Promise<{ import
   let imported = 0;
   let skipped = 0;
 
+  let errors = 0;
+
   for (const invoice of invoices) {
     // API trả camelCase: invoiceDelivery.status
     const delivery = invoice.invoiceDelivery;
@@ -95,44 +97,49 @@ export async function syncKiotVietOrders(app: FastifyInstance): Promise<{ import
       continue;
     }
 
-    // API trả camelCase: invoiceDetails[].productCode, quantity
-    const details: any[] = invoice.invoiceDetails || [];
+    try {
+      // API trả camelCase: invoiceDetails[].productCode, quantity
+      const details: any[] = invoice.invoiceDetails || [];
 
-    // Gộp các dòng trùng SKU (cộng dồn quantity) để tránh vi phạm unique constraint
-    const mergedMap = new Map<string, number>();
-    for (const d of details) {
-      const sku = d.productCode as string;
-      const qty = (d.quantity || 1) as number;
-      mergedMap.set(sku, (mergedMap.get(sku) || 0) + qty);
-    }
-    const items = Array.from(mergedMap.entries()).map(([sku, quantity]) => ({ sku, quantity }));
+      // Gộp các dòng trùng SKU (cộng dồn quantity) để tránh vi phạm unique constraint
+      const mergedMap = new Map<string, number>();
+      for (const d of details) {
+        const sku = d.productCode as string;
+        const qty = (d.quantity || 1) as number;
+        mergedMap.set(sku, (mergedMap.get(sku) || 0) + qty);
+      }
+      const items = Array.from(mergedMap.entries()).map(([sku, quantity]) => ({ sku, quantity }));
 
-    const skus = items.map((i) => i.sku);
-    const products = await app.prisma.product.findMany({ where: { sku: { in: skus } } });
-    const productMap = new Map(products.map((p) => [p.sku, p]));
+      const skus = items.map((i) => i.sku);
+      const products = await app.prisma.product.findMany({ where: { sku: { in: skus } } });
+      const productMap = new Map(products.map((p) => [p.sku, p]));
 
-    const unmatchedSkus = skus.filter((s) => !productMap.has(s));
-    if (unmatchedSkus.length > 0) {
-      app.log.warn('KiotViet sync: SKU không tìm thấy: ' + unmatchedSkus.join(', '));
-    }
+      const unmatchedSkus = skus.filter((s) => !productMap.has(s));
+      if (unmatchedSkus.length > 0) {
+        app.log.warn('KiotViet sync: SKU không tìm thấy: ' + unmatchedSkus.join(', '));
+      }
 
-    await app.prisma.order.create({
-      data: {
-        shippingCode,
-        source: 'kiotviet-api',
-        rawPayload: JSON.stringify(invoice),
-        items: {
-          create: items
-            .filter((i) => productMap.has(i.sku))
-            .map((i) => ({ productId: productMap.get(i.sku)!.id, quantity: i.quantity })),
+      await app.prisma.order.create({
+        data: {
+          shippingCode,
+          source: 'kiotviet-api',
+          rawPayload: JSON.stringify(invoice),
+          items: {
+            create: items
+              .filter((i) => productMap.has(i.sku))
+              .map((i) => ({ productId: productMap.get(i.sku)!.id, quantity: i.quantity })),
+          },
         },
-      },
-    });
+      });
 
-    imported++;
-    app.log.info('KiotViet sync: Order ' + shippingCode + ' imported');
+      imported++;
+      app.log.info('KiotViet sync: Order ' + shippingCode + ' imported');
+    } catch (err: any) {
+      errors++;
+      app.log.error('KiotViet sync: Failed to import order ' + shippingCode + ': ' + (err.message || err));
+    }
   }
 
-  app.log.info(`KiotViet sync done: ${imported} imported, ${skipped} skipped, ${invoices.length} total`);
+  app.log.info(`KiotViet sync done: ${imported} imported, ${skipped} skipped, ${errors} errors, ${invoices.length} total`);
   return { imported, skipped, total: invoices.length };
 }
