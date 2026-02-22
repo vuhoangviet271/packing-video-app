@@ -80,11 +80,23 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
           }
 
           // KiotViet PascalCase: InvoiceDetails[].ProductCode + Quantity
+          // Gộp các dòng trùng SKU (cộng dồn quantity) để tránh vi phạm unique constraint
           const invoiceDetails = orderData.InvoiceDetails || [];
-          const items: { sku: string; quantity: number; productName: string }[] = invoiceDetails.map((detail: any) => ({
-            sku: detail.ProductCode,
-            quantity: detail.Quantity || 1,
-            productName: detail.ProductName || '',
+          const mergedMap = new Map<string, { quantity: number; productName: string }>();
+          for (const detail of invoiceDetails) {
+            const sku = detail.ProductCode as string;
+            const qty = (detail.Quantity || 1) as number;
+            const existing = mergedMap.get(sku);
+            if (existing) {
+              existing.quantity += qty;
+            } else {
+              mergedMap.set(sku, { quantity: qty, productName: detail.ProductName || '' });
+            }
+          }
+          const items = Array.from(mergedMap.entries()).map(([sku, v]) => ({
+            sku,
+            quantity: v.quantity,
+            productName: v.productName,
           }));
 
           const skus = items.map((i) => i.sku);

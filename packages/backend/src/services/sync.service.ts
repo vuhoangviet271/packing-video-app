@@ -97,10 +97,15 @@ export async function syncKiotVietOrders(app: FastifyInstance): Promise<{ import
 
     // API trả camelCase: invoiceDetails[].productCode, quantity
     const details: any[] = invoice.invoiceDetails || [];
-    const items = details.map((d: any) => ({
-      sku: d.productCode as string,
-      quantity: (d.quantity || 1) as number,
-    }));
+
+    // Gộp các dòng trùng SKU (cộng dồn quantity) để tránh vi phạm unique constraint
+    const mergedMap = new Map<string, number>();
+    for (const d of details) {
+      const sku = d.productCode as string;
+      const qty = (d.quantity || 1) as number;
+      mergedMap.set(sku, (mergedMap.get(sku) || 0) + qty);
+    }
+    const items = Array.from(mergedMap.entries()).map(([sku, quantity]) => ({ sku, quantity }));
 
     const skus = items.map((i) => i.sku);
     const products = await app.prisma.product.findMany({ where: { sku: { in: skus } } });
