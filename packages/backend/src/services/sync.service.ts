@@ -41,25 +41,41 @@ export async function syncKiotVietOrders(app: FastifyInstance): Promise<{ import
   const retailer = process.env.KIOTVIET_RETAILER || 'spotless';
   const token = await getKiotVietToken();
 
-  const url =
+  const baseUrl =
     'https://public.kiotapi.com/invoices?SaleChannel=true&pageSize=200&orderDirection=Desc&includeInvoiceDelivery=true';
+  const MAX_ITEMS = 1000; // Lấy tối đa 1000 đơn (5 pages × 200)
+  let currentItem = 0;
+  const invoices: any[] = [];
 
-  const res = await fetch(url, {
-    headers: {
-      Retailer: retailer,
-      Authorization: 'Bearer ' + token,
-      'Accept-Encoding': 'identity',
-    },
-  });
+  while (currentItem < MAX_ITEMS) {
+    const url = `${baseUrl}&currentItem=${currentItem}`;
+    const res = await fetch(url, {
+      headers: {
+        Retailer: retailer,
+        Authorization: 'Bearer ' + token,
+        'Accept-Encoding': 'identity',
+      },
+    });
 
-  if (!res.ok) {
-    const text = await res.text();
-    app.log.error('KiotViet API failed: ' + res.status + ' ' + text);
-    throw new Error('KiotViet API failed: ' + res.status);
+    if (!res.ok) {
+      const text = await res.text();
+      app.log.error('KiotViet API failed: ' + res.status + ' ' + text);
+      throw new Error('KiotViet API failed: ' + res.status);
+    }
+
+    const json = (await res.json()) as { total: number; data: any[] };
+    const pageInvoices = json.data || [];
+    invoices.push(...pageInvoices);
+
+    app.log.debug(`KiotViet sync: Fetched page at offset ${currentItem}, got ${pageInvoices.length} invoices (total: ${json.total})`);
+
+    // Dừng nếu đã lấy hết hoặc page trả về ít hơn 200
+    if (pageInvoices.length < 200 || invoices.length >= json.total) {
+      break;
+    }
+
+    currentItem += 200;
   }
-
-  const json = (await res.json()) as { data: any[] };
-  const invoices: any[] = json.data || [];
 
   let imported = 0;
   let skipped = 0;
